@@ -37,3 +37,4 @@ generated-sources
 derby.log
 
 TempStatsStore
+/bin/

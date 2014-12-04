@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="WINDOWS-1252" standalone="no"?>
+<jardesc>
+    <jar path="C:/Program Files (x86)/PuTTY_CERN/upload/impala-frontend-0.1-SNAPSHOT.jar"/>
+    <options buildIfNeeded="true" compress="true" descriptionLocation="/Impala-fe/export.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="false" overwrite="false" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
+    <storedRefactorings deprecationInfo="true" structuralOnly="false"/>
+    <selectedProjects/>
+    <manifest generateManifest="true" manifestLocation="" manifestVersion="1.0" reuseManifest="false" saveManifest="false" usesManifest="true">
+        <sealing sealJar="false">
+            <packagesToSeal/>
+            <packagesToUnSeal/>
+        </sealing>
+    </manifest>
+    <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
+        <javaElement handleIdentifier="=Impala-fe/src\/main\/java"/>
+        <javaElement handleIdentifier="=Impala-fe/lib_from_cluster\/impala-frontend-0.1-SNAPSHOT.jar_classes"/>
+    </selectedElements>
+</jardesc>
