@@ -1,10 +1,5 @@
 target
 
-# Eclipse artifacts
-.classpath
-.settings
-.project
-
 # IntelliJ artifacts
 *.iml
 *.ipr
