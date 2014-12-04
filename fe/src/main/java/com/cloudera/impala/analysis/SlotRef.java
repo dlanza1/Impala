@@ -219,4 +219,8 @@ public class SlotRef extends Expr {
       return super.uncheckedCastTo(targetType);
     }
   }
+
+  public TableName getTableName() {
+    return tblName_;
+  }
 }

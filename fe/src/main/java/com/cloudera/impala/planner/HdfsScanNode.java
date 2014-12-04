@@ -207,7 +207,7 @@ public class HdfsScanNode extends ScanNode {
    * Check if the PrimitiveType of an Expr is the same as the
    * PrimitiveType of a SlotRef's column.
    */
-  private boolean hasIdenticalType(SlotRef slot, Expr literal) {
+  private static boolean hasIdenticalType(SlotRef slot, Expr literal) {
     Preconditions.checkNotNull(slot);
     Preconditions.checkNotNull(literal);
     Column slotCol = slot.getDesc().getColumn();
@@ -220,7 +220,7 @@ public class HdfsScanNode extends ScanNode {
    * Recursive function that checks if a given partition expr can be evaluated
    * directly from the partition key values.
    */
-  private boolean canEvalUsingPartitionMd(Expr expr) {
+  protected static boolean canEvalUsingPartitionMd(Expr expr) {
     Preconditions.checkNotNull(expr);
     if (expr instanceof BinaryPredicate) {
       BinaryPredicate bp = (BinaryPredicate)expr;
@@ -487,6 +487,22 @@ public class HdfsScanNode extends ScanNode {
         }
         it.remove();
       }
+    }
+
+    //Try to apply automatic partitioning
+    try {
+      new PartitioningAuto(analyzer, tbl_).applyFilters(
+          conjuncts_, tupleIds_, simpleFilterConjuncts, partitionFilters);
+    } catch (IllegalStateException e){
+      LOG.debug("There was an error trying to apply automatic partitioning, "
+          + "so it was not applied.");
+
+      e.printStackTrace();
+    } catch (Exception e) {
+      LOG.debug("There was an error trying to apply automatic partitioning, "
+          + "so it was not applied.");
+
+      e.printStackTrace();
     }
 
     // Set of matching partition ids, i.e. partitions that pass all filters

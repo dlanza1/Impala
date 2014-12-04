@@ -288,4 +288,8 @@ public class CastExpr extends Expr {
 
   @Override
   public Expr clone() { return new CastExpr(this); }
+
+  public Type getTargetType() {
+    return targetType_;
+  }
 }

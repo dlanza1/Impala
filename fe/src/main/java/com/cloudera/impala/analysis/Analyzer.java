@@ -2459,4 +2459,8 @@ public class Analyzer {
     }
     return false;
   }
+
+  public Analyzer getAnalzer(SlotId slotId) {
+    return globalState_.blockBySlot.get(slotId);
+  }
 }
