@@ -15,19 +15,20 @@
 package com.cloudera.impala.analysis;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
-import com.cloudera.impala.analysis.BinaryPredicate.Operator;
 import com.cloudera.impala.catalog.Db;
 import com.cloudera.impala.catalog.Function.CompareMode;
+import com.cloudera.impala.catalog.HdfsTable;
 import com.cloudera.impala.catalog.ScalarFunction;
 import com.cloudera.impala.catalog.Type;
 import com.cloudera.impala.common.AnalysisException;
+import com.cloudera.impala.common.Pair;
 import com.cloudera.impala.common.Reference;
 import com.cloudera.impala.thrift.TExprNode;
 import com.cloudera.impala.thrift.TExprNodeType;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
 
 /**
@@ -183,4 +184,46 @@ public class InPredicate extends Predicate {
 
   @Override
   public Expr clone() { return new InPredicate(this); }
+
+  @Override
+  public Expr applyAutoPartitionPruning(Analyzer analyzer, HdfsTable tbl_,
+      Pair<Expr, Expr> between_bounds) throws AnalysisException {
+
+    if (getBoundSlot() == null)
+      return this;
+
+    Expr out_pred = null;
+
+    LinkedList<SlotRef> part_columns = getBoundSlot()
+                              .getColumnsForAutomaticPartitioning(analyzer, tbl_, between_bounds);
+
+    for (SlotRef part_column : part_columns) {
+      Expr pred = toAutoPartitionPruning(part_column);
+
+      if(out_pred == null){
+        out_pred = pred;
+      }else{
+        out_pred = new CompoundPredicate(
+            CompoundPredicate.Operator.AND,
+            pred,
+            out_pred);
+      }
+    }
+
+    return out_pred;
+  }
+
+  @Override
+  public Expr toAutoPartitionPruning(SlotRef part_column) throws AnalysisException {
+    ArrayList<Expr> inList = new ArrayList<Expr>();
+
+    @SuppressWarnings("unchecked")
+    ArrayList<Expr> actualInList = (ArrayList<Expr>) getChildren().clone();
+    actualInList.remove(0);
+
+    for (Expr expr : actualInList)
+      inList.add(part_column.getPartitionFunction(expr));
+
+    return new InPredicate(part_column, inList, false);
+  }
 }

@@ -18,6 +18,7 @@ import org.apache.hadoop.hive.metastore.api.ColumnStatisticsData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.cloudera.impala.planner.AutoPartitionPruning;
 import com.cloudera.impala.thrift.TColumn;
 import com.cloudera.impala.thrift.TColumnStats;
 import com.google.common.base.Objects;
@@ -104,5 +105,29 @@ public class Column {
     colDesc.setPosition(position_);
     colDesc.setCol_stats(getStats().toThrift());
     return colDesc;
+  }
+
+  /**
+   * Check if automatic partition pruning can be applied
+   * with this column
+   *
+   * @param tbl_ Owner table of this column
+   * @return True if can be used for this purpose, otherwise false
+   */
+  public boolean canBeAppliedAutomaticPartitioning(HdfsTable tbl_) {
+    // Check if is a partitioning column
+    if (getPosition() < tbl_.getNumClusteringCols())
+      return false;
+
+    String subtring_part = getName()
+        + AutoPartitionPruning.PARTITIONING_SUBSTRING;
+
+    for (Column column : tbl_.getColumns()) {
+      if (column.getName().startsWith(subtring_part)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }

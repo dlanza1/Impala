@@ -14,19 +14,19 @@
 
 package com.cloudera.impala.analysis;
 
-import java.util.ArrayList;
-import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.cloudera.impala.catalog.Type;
 import com.cloudera.impala.common.AnalysisException;
 import com.cloudera.impala.common.Pair;
 import com.cloudera.impala.common.Reference;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicates;
-import com.google.common.collect.Lists;
-
 public abstract class Predicate extends Expr {
+  private final static Logger LOG = LoggerFactory
+      .getLogger(Predicate.class);
+
   protected boolean isEqJoinConjunct_;
 
   public Predicate() {
@@ -93,4 +93,5 @@ public abstract class Predicate extends Expr {
    * Returns the SlotRef bound by this Predicate.
    */
   public SlotRef getBoundSlot() { return null; }
+
 }

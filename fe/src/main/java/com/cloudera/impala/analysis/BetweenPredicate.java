@@ -17,7 +17,9 @@ package com.cloudera.impala.analysis;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.cloudera.impala.catalog.HdfsTable;
 import com.cloudera.impala.common.AnalysisException;
+import com.cloudera.impala.common.Pair;
 import com.cloudera.impala.thrift.TExprNode;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -149,5 +151,19 @@ public class BetweenPredicate extends Predicate {
     super.reset();
     originalChildren_ = Expr.resetList(originalChildren_);
     return this;
+  }
+
+  @Override
+  public Expr applyAutoPartitionPruning(Analyzer analyzer, HdfsTable tbl_,
+      Pair<Expr, Expr> between_bounds) throws AnalysisException {
+    CompoundPredicate comp_pred = getRewrittenPredicate();
+    BinaryPredicate child0 = ((BinaryPredicate) comp_pred.getChild(0));
+    BinaryPredicate child1 = ((BinaryPredicate) comp_pred.getChild(1));
+
+    Pair<Expr, Expr> bounds =  new Pair<Expr, Expr>(
+        child0.getSlotBinding(child0.getBoundSlot().getSlotId()),
+        child1.getSlotBinding(child1.getBoundSlot().getSlotId()));
+
+    return comp_pred.applyAutoPartitionPruning(analyzer, tbl_, bounds);
   }
 }

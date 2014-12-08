@@ -15,12 +15,11 @@
 package com.cloudera.impala.analysis;
 
 import java.util.ArrayList;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.LinkedList;
 
 import com.cloudera.impala.catalog.Db;
 import com.cloudera.impala.catalog.Function.CompareMode;
+import com.cloudera.impala.catalog.HdfsTable;
 import com.cloudera.impala.catalog.ScalarFunction;
 import com.cloudera.impala.catalog.Type;
 import com.cloudera.impala.common.AnalysisException;
@@ -39,7 +38,6 @@ import com.google.common.collect.Lists;
  *
  */
 public class BinaryPredicate extends Predicate {
-  private final static Logger LOG = LoggerFactory.getLogger(BinaryPredicate.class);
 
   public enum Operator {
     EQ("=", "eq", TComparisonOp.EQ),
@@ -298,4 +296,67 @@ public class BinaryPredicate extends Predicate {
 
   @Override
   public Expr clone() { return new BinaryPredicate(this); }
+
+  @Override
+  public Expr applyAutoPartitionPruning(Analyzer analyzer, HdfsTable tbl_,
+      Pair<Expr, Expr> between_bounds) throws AnalysisException {
+
+    if (getBoundSlot() == null)
+      throw new IllegalStateException("is not of the form \"<SlotRef> op <Expr>\" or \"<Expr> op <SlotRef>\"");
+
+    LinkedList<SlotRef> part_columns = getBoundSlot()
+        .getColumnsForAutomaticPartitioning(analyzer, tbl_, between_bounds);
+
+    Expr out_pred = null;
+    for (SlotRef part_column : part_columns) {
+      Expr pred = toAutoPartitionPruning(part_column);
+
+      if (out_pred == null) {
+        out_pred = pred;
+      } else {
+        out_pred = new CompoundPredicate(
+            CompoundPredicate.Operator.AND,
+            pred,
+            out_pred);
+      }
+    }
+
+    return out_pred;
+  }
+
+  @Override
+  public Expr toAutoPartitionPruning(SlotRef part_column) throws AnalysisException {
+    FunctionCallExpr func = part_column.getPartitionFunction(
+        getSlotBinding(getBoundSlot().getSlotId()));
+
+    Operator op = getOperatorForAutoPartitionPruning(func.getFnName(), getOp());
+
+    return new BinaryPredicate(op, part_column, func);
+  }
+
+  private Operator getOperatorForAutoPartitionPruning(FunctionName fnName, Operator op) {
+
+    if (fnName.getFunction().equals("pmod")) {
+      if (op != Operator.EQ)
+        throw new IllegalStateException("can not be applied with "
+            + "partitioning by module and operators different than EQ.");
+    }
+
+    if (fnName.getFunction().equals("year")
+        || fnName.getFunction().equals("month")
+        || fnName.getFunction().equals("day")
+        || fnName.getFunction().equals("hour")) {
+      if (op == Operator.LT)
+        return Operator.LE;
+      if (op == Operator.GT)
+        return Operator.GE;
+      if (op == Operator.NE)
+        throw new IllegalStateException(
+            "Autmatic partitioning can not be applied with "
+                + "partitioning by time and NE operator.");
+    }
+
+    return op;
+  }
+
 }

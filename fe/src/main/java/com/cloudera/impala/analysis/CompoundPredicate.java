@@ -19,9 +19,11 @@ import java.util.List;
 
 import com.cloudera.impala.catalog.Db;
 import com.cloudera.impala.catalog.Function.CompareMode;
+import com.cloudera.impala.catalog.HdfsTable;
 import com.cloudera.impala.catalog.ScalarFunction;
 import com.cloudera.impala.catalog.Type;
 import com.cloudera.impala.common.AnalysisException;
+import com.cloudera.impala.common.Pair;
 import com.cloudera.impala.thrift.TExprNode;
 import com.cloudera.impala.thrift.TExprNodeType;
 import com.google.common.base.Objects;
@@ -208,5 +210,75 @@ public class CompoundPredicate extends Predicate {
   public static Expr createConjunction(Expr lhs, Expr rhs) {
     if (rhs == null) return lhs;
     return new CompoundPredicate(Operator.AND, rhs, lhs);
+  }
+
+  @Override
+  public Expr applyAutoPartitionPruning(Analyzer analyzer, HdfsTable tbl_,
+      Pair<Expr, Expr> between_bounds) throws AnalysisException {
+
+    if (between_bounds == null) {
+      between_bounds = treatLikeBetween();
+    }
+
+    return new CompoundPredicate(getOp(),
+        getChild(0).applyAutoPartitionPruning(analyzer, tbl_, between_bounds),
+        getChild(1).applyAutoPartitionPruning(analyzer, tbl_, between_bounds));
+  }
+
+  /**
+   * Evaluate if this CompoundPredicate is of the form:
+   *   column > 10 and column < 10 (like BetweenPredicate)
+   * and if so, get the boundaries and return it.
+   *
+   * @return Boundaries or null if can not treated like a BetweenPredicate
+   */
+  public Pair<Expr, Expr> treatLikeBetween() {
+
+    if(getOp() != com.cloudera.impala.analysis.CompoundPredicate.Operator.AND)
+      return null;
+
+    Expr child_0 = getChild(0);
+    Expr child_1 = getChild(1);
+
+    //Check if both childs are Binary predicate
+    if(child_0 == null || !(child_0 instanceof BinaryPredicate)
+        || child_1 == null || !(child_1 instanceof BinaryPredicate))
+      return null;
+
+    BinaryPredicate bp_0 = (BinaryPredicate) child_0;
+    BinaryPredicate bp_1 = (BinaryPredicate) child_1;
+
+    //Check if both columns are the same
+    if(!bp_0.getBoundSlot().equals(bp_1.getBoundSlot()))
+      return null;
+
+    //Possibilities allowed
+    // < >    > <
+    // < >=   >= <
+    // > <=   <= >
+    // >= <=  <= >=
+    com.cloudera.impala.analysis.BinaryPredicate.Operator op_0 = bp_0.getOp();
+    com.cloudera.impala.analysis.BinaryPredicate.Operator op_1 = bp_1.getOp();
+    if(!( (op_0 == com.cloudera.impala.analysis.BinaryPredicate.Operator.LT
+        && op_1 == com.cloudera.impala.analysis.BinaryPredicate.Operator.GT)
+        || (op_0 == com.cloudera.impala.analysis.BinaryPredicate.Operator.GT
+        && op_1 == com.cloudera.impala.analysis.BinaryPredicate.Operator.LT)
+        || (op_0 == com.cloudera.impala.analysis.BinaryPredicate.Operator.LT
+        && op_1 == com.cloudera.impala.analysis.BinaryPredicate.Operator.GE)
+        || (op_0 == com.cloudera.impala.analysis.BinaryPredicate.Operator.GE
+        && op_1 == com.cloudera.impala.analysis.BinaryPredicate.Operator.LT)
+        || (op_0 == com.cloudera.impala.analysis.BinaryPredicate.Operator.GT
+        && op_1 == com.cloudera.impala.analysis.BinaryPredicate.Operator.LE)
+        || (op_0 == com.cloudera.impala.analysis.BinaryPredicate.Operator.LE
+        && op_1 == com.cloudera.impala.analysis.BinaryPredicate.Operator.GT)
+        || (op_0 == com.cloudera.impala.analysis.BinaryPredicate.Operator.GE
+        && op_1 == com.cloudera.impala.analysis.BinaryPredicate.Operator.LE)
+        || (op_0 == com.cloudera.impala.analysis.BinaryPredicate.Operator.LE
+        && op_1 == com.cloudera.impala.analysis.BinaryPredicate.Operator.GE) ))
+      return null;
+
+    return new Pair<Expr, Expr>(
+        bp_0.getSlotBinding(bp_0.getBoundSlot().getSlotId()),
+        bp_1.getSlotBinding(bp_1.getBoundSlot().getSlotId()));
   }
 }

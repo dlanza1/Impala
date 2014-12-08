@@ -491,15 +491,15 @@ public class HdfsScanNode extends ScanNode {
 
     //Try to apply automatic partitioning
     try {
-      new PartitioningAuto(analyzer, tbl_).applyFilters(
+      new AutoPartitionPruning(analyzer, tbl_).applyFilters(
           conjuncts_, tupleIds_, simpleFilterConjuncts, partitionFilters);
     } catch (IllegalStateException e){
-      LOG.debug("There was an error trying to apply automatic partitioning, "
+      LOG.debug("There was an error (" + e.getMessage() + ") trying to apply automatic partitioning, "
           + "so it was not applied.");
 
       e.printStackTrace();
     } catch (Exception e) {
-      LOG.debug("There was an error trying to apply automatic partitioning, "
+      LOG.debug("There was an error (" + e.getMessage() + ") trying to apply automatic partitioning, "
           + "so it was not applied.");
 
       e.printStackTrace();
