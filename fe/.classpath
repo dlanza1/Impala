@@ -151,5 +151,6 @@
 	<classpathentry kind="lib" path="lib_from_cluster/xz-1.0.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/zookeeper.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/impala-frontend-0.1-SNAPSHOT.jar_classes"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

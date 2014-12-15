@@ -36,6 +36,9 @@ public class AutoPartitionPruning {
 
 	private static final List<String> COMPATIBLE_FUNCTIONS = Arrays.asList(
 	    "mod",
+	    "div",
+	    "nummonths",
+	    "numdays",
 	    "year",
 	    "month",
 	    "day",
@@ -151,6 +154,7 @@ public class AutoPartitionPruning {
 
     if(between_bounds != null)
     try{
+
       Calendar lower_cal = ((CastExpr) between_bounds.first).toCalendar();
       Calendar upper_cal = ((CastExpr) between_bounds.second).toCalendar();
 
@@ -188,12 +192,12 @@ public class AutoPartitionPruning {
 
     }catch(IllegalStateException e){
       LOG.debug("There was an error (" + e.getMessage() + ") when trying "
-          + "to obtain coarse filter for between clause,"
+          + "to obtain partition columns for between clause,"
           + " the existing most coarse function will be used (amoung year, month, day or hour).");
       e.printStackTrace();
     }catch(Exception e){
       LOG.debug("There was an error (" + e.getMessage() + ") when trying "
-          + "to obtain coarse filter for between clause,"
+          + "to obtain partition columns for between clause,"
           + " the existing most coarse function will be used (amoung year, month, day or hour).");
       e.printStackTrace();
     }

@@ -15,10 +15,12 @@
 package com.cloudera.impala.analysis;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import com.cloudera.impala.analysis.ArithmeticExpr.Operator;
 import com.cloudera.impala.catalog.Column;
 import com.cloudera.impala.catalog.HdfsTable;
 import com.cloudera.impala.catalog.Type;
@@ -309,7 +311,41 @@ public class SlotRef extends Expr {
       params.add(new NumericLiteral(new BigDecimal(module)));
 
       function_name = "pmod";
+    }else if(function_name.equals("div")){
+      int divisor = Integer.valueOf(col_.substring(
+          col_.lastIndexOf("_") + 1, col_.length()));
+
+      ArithmeticExpr arit = new ArithmeticExpr(Operator.DIVIDE, binding, new NumericLiteral(new BigDecimal(divisor)));
+      params.remove(binding);
+      params.add(arit);
+
+      function_name = "floor";
+    }else if(function_name.equals("nummonths")){
+      FunctionCallExpr year = new FunctionCallExpr("year", Arrays.asList(binding));
+      FunctionCallExpr month = new FunctionCallExpr("month", Arrays.asList(binding));
+
+      ArithmeticExpr arit = new ArithmeticExpr(Operator.ADD,
+          new ArithmeticExpr(Operator.MULTIPLY, year, new NumericLiteral(new BigDecimal(12))),
+          month);
+
+      params.remove(binding);
+      params.add(arit);
+
+      function_name = "floor";
+    }else if(function_name.equals("numdays")){
+      FunctionCallExpr year = new FunctionCallExpr("year", Arrays.asList(binding));
+      FunctionCallExpr day_of_year = new FunctionCallExpr("dayofyear", Arrays.asList(binding));
+
+      ArithmeticExpr arit = new ArithmeticExpr(Operator.ADD,
+          new ArithmeticExpr(Operator.MULTIPLY, year, new NumericLiteral(new BigDecimal(365))),
+          day_of_year);
+
+      params.remove(binding);
+      params.add(arit);
+
+      function_name = "floor";
     }
+    //year('2012-08-17 05:14:43') * 12 + month('2012-08-17 05:14:43')
 
     return new FunctionCallExpr(function_name, params);
   }

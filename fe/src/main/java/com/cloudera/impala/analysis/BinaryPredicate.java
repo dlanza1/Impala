@@ -345,7 +345,8 @@ public class BinaryPredicate extends Predicate {
     if (fnName.getFunction().equals("year")
         || fnName.getFunction().equals("month")
         || fnName.getFunction().equals("day")
-        || fnName.getFunction().equals("hour")) {
+        || fnName.getFunction().equals("hour")
+        || fnName.getFunction().equals("floor")) {
       if (op == Operator.LT)
         return Operator.LE;
       if (op == Operator.GT)
@@ -353,7 +354,7 @@ public class BinaryPredicate extends Predicate {
       if (op == Operator.NE)
         throw new IllegalStateException(
             "Autmatic partitioning can not be applied with "
-                + "partitioning by time and NE operator.");
+                + "partitioning by " + fnName + " and NE operator.");
     }
 
     return op;
