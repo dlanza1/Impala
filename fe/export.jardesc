@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="WINDOWS-1252" standalone="no"?>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <jardesc>
-    <jar path="C:/Program Files (x86)/PuTTY_CERN/upload/impala-frontend-0.1-SNAPSHOT.jar"/>
+    <jar path="/home/dlanza/impala-frontend-0.1-SNAPSHOT.jar"/>
     <options buildIfNeeded="true" compress="true" descriptionLocation="/Impala-fe/export.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="false" overwrite="false" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
     <storedRefactorings deprecationInfo="true" structuralOnly="false"/>
     <selectedProjects/>

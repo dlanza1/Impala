@@ -12,7 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.cloudera.impala.analysis.Analyzer;
+import com.cloudera.impala.analysis.BinaryPredicate;
 import com.cloudera.impala.analysis.CastExpr;
+import com.cloudera.impala.analysis.CompoundPredicate;
 import com.cloudera.impala.analysis.Expr;
 import com.cloudera.impala.analysis.SlotDescriptor;
 import com.cloudera.impala.analysis.SlotId;
@@ -84,7 +86,7 @@ public class AutoPartitionPruning {
 			LOG.debug("Trying to apply to conjunct: " + conjunct.toSql());
 
 			if (conjunct.isBoundBySlotIds(partitionSlots)) {
-			  conjunct = apply(analyzer, tbl_, conjunct);
+			  conjunct = apply(analyzer, tbl_, conjuncts_, conjunct);
 
 				addFilter(simpleFilterConjuncts, partitionFilters, conjunct);
 			} else {
@@ -95,12 +97,31 @@ public class AutoPartitionPruning {
 
 		if (applied) analyzer.computeEquivClasses();
 
-		LOG.debug("Time = " + (System.currentTimeMillis() - time_start) + " ms");
+		LOG.debug("time elapsed: " + (System.currentTimeMillis() - time_start) + " ms");
 	}
 
-  private Expr apply(Analyzer analyzer, HdfsTable tbl_, Expr conjunct) {
+  private Expr apply(Analyzer analyzer, HdfsTable tbl_,  List<Expr> conjuncts_, Expr conjunct) {
     try {
-      return conjunct.applyAutoPartitionPruning(analyzer, tbl_, null);
+      //Look for a between predicate
+      Pair<Expr, Expr> between_bounds = null;
+      if(conjunct instanceof BinaryPredicate){
+        Iterator<Expr> it = conjuncts_.iterator();
+        while (it.hasNext() && between_bounds == null) {
+          Expr other_conjunct = it.next();
+
+          if(conjunct == other_conjunct)
+            continue;
+
+          between_bounds = new CompoundPredicate(com.cloudera.impala.analysis.CompoundPredicate.Operator.AND,
+                                                      conjunct, other_conjunct).treatLikeBetween();
+
+          if(between_bounds != null){
+            LOG.info("between predicate detected with " + other_conjunct.toSql());
+          }
+        }
+      }
+
+      return conjunct.applyAutoPartitionPruning(analyzer, tbl_, between_bounds);
     } catch (IllegalStateException e) {
       LOG.debug("Could not be applied to: (" + conjunct.toSql() + ") because "
           + e.getMessage());
@@ -223,10 +244,11 @@ public class AutoPartitionPruning {
   private static HashMap<String, SlotRef> getPartitionColumnsMap(LinkedList<SlotRef> part_columns) throws AnalysisException {
     HashMap<String, SlotRef> part_columns_map = new HashMap<String, SlotRef>();
 
-    for (SlotRef slotRef : part_columns)
+    for (SlotRef slotRef : part_columns){
       part_columns_map.put(
           slotRef.getPartitionFunction(null).getFnName().getFunction(),
           slotRef);
+    }
 
     return part_columns_map;
   }

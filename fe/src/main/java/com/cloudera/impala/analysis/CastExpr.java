@@ -321,9 +321,9 @@ public class CastExpr extends Expr {
 
     SimpleDateFormat sdf;
     if(!string.contains(":"))
-      sdf = new SimpleDateFormat("dd-M-yyyy");
+      sdf = new SimpleDateFormat("yyyy-M-dd");
     else
-      sdf = new SimpleDateFormat("dd-M-yyyy hh:mm");
+      sdf = new SimpleDateFormat("yyyy-M-dd hh:mm:ss");
 
     Calendar cal = Calendar.getInstance();
     cal.setTime(sdf.parse(string));
