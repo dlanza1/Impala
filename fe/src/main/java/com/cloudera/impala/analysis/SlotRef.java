@@ -257,9 +257,10 @@ public class SlotRef extends Expr {
       String column_name = column.getName();
 
       if (column_name.contains(subtring_part)) {
+
         SlotRef part_slotRef = new SlotRef(getTableName(), column_name);
         part_slotRef.analyze(analyzer.getAnalzer(getSlotId()));
-
+        analyzer.createIdentityEquivClasses();
         slots_part.add(part_slotRef);
 
         if(column_name.endsWith(AutoPartitionPruning.PARTITIONING_SUBSTRING + "year")
