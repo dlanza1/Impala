@@ -12,6 +12,6 @@
     </manifest>
     <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
         <javaElement handleIdentifier="=Impala-fe/src\/main\/java"/>
-        <javaElement handleIdentifier="=Impala-fe/lib_from_cluster\/impala-frontend-0.1-SNAPSHOT.jar_classes"/>
+        <javaElement handleIdentifier="=Impala-fe/lib_from_cluster\/impala-frontend-0.1-SNAPSHOT.jar"/>
     </selectedElements>
 </jardesc>

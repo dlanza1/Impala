@@ -2,6 +2,7 @@
 <classpath>
 	<classpathentry kind="src" path="src/main/java"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="lib" path="lib_from_cluster/activation-1.1.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/ant-1.5.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/ant-1.9.1.jar"/>
@@ -22,7 +23,7 @@
 	<classpathentry kind="lib" path="lib_from_cluster/commons-beanutils-1.8.3.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/commons-beanutils-core-1.8.0.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/commons-cli-1.2.jar"/>
-	<classpathentry kind="lib" path="lib_from_cluster/commons-codec-1.4.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/commons-codec-1.9.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/commons-collections-3.2.1.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/commons-compress-1.4.1.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/commons-configuration-1.6.jar"/>
@@ -86,7 +87,10 @@
 	<classpathentry kind="lib" path="lib_from_cluster/httpclient-4.2.5.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/httpcore-4.2.5.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/impala-data-source-api-1.0-SNAPSHOT.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/jackson-annotations-2.2.2.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/jackson-core-2.2.2.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/jackson-core-asl-1.8.8.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/jackson-databind-2.2.2.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/jackson-jaxrs-1.8.3.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/jackson-mapper-asl-1.8.8.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/jackson-xc-1.8.3.jar"/>
@@ -95,6 +99,7 @@
 	<classpathentry kind="lib" path="lib_from_cluster/java-cup-0.11a.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/java-xmlbuilder-0.4.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/javax.inject-1.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/javax.servlet-2.5.0.v201103041518.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/jaxb-api-2.2.2.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/jaxb-impl-2.2.3-1.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/jdo-api-3.0.1.jar"/>
@@ -108,7 +113,14 @@
 	<classpathentry kind="lib" path="lib_from_cluster/jettison-1.1.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/jetty-6.1.26.cloudera.4.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/jetty-all-7.6.0.v20120127.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/jetty-continuation-7.6.16.v20140903.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/jetty-http-7.6.16.v20140903.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/jetty-io-7.6.16.v20140903.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/jetty-security-7.6.16.v20140903.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/jetty-server-7.6.16.v20140903.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/jetty-servlet-7.6.16.v20140903.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/jetty-util-6.1.26.cloudera.4.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/jetty-util-7.6.16.v20140903.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/jline-0.9.94.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/jpam-1.1.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/jsch-0.1.42.jar"/>
@@ -120,6 +132,11 @@
 	<classpathentry kind="lib" path="lib_from_cluster/libthrift-0.9.0.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/log4j-1.2.17.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/mail-1.4.1.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/metrics-core-3.0.2.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/metrics-healthchecks-3.0.2.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/metrics-json-3.0.2.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/metrics-jvm-3.0.2.jar"/>
+	<classpathentry kind="lib" path="lib_from_cluster/metrics-servlets-3.0.2.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/netty-3.6.2.Final.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/opencsv-2.3.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/oro-2.0.8.jar"/>
@@ -150,7 +167,6 @@
 	<classpathentry kind="lib" path="lib_from_cluster/xmlenc-0.52.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/xz-1.0.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/zookeeper.jar"/>
-	<classpathentry kind="lib" path="lib_from_cluster/impala-frontend-0.1-SNAPSHOT.jar_classes"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry kind="lib" path="lib_from_cluster/impala-frontend-0.1-SNAPSHOT.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
