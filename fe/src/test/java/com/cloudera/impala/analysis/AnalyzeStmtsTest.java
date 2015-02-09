@@ -19,6 +19,8 @@ import static org.junit.Assert.fail;
 
 import java.lang.reflect.Field;
 
+import junit.framework.Assert;
+
 import org.junit.Test;
 
 import com.cloudera.impala.catalog.PrimitiveType;

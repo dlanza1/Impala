@@ -833,6 +833,14 @@ public class BuiltinsDb extends Db {
           prefix + FIRST_VALUE_REWRITE_UPDATE_SYMBOL.get(t),
           null,
           t == Type.STRING ? stringValGetValue : null,
+          t == Type.STRING ? stringValSerializeOrFinalize : null));
+      // Implements FIRST_VALUE for some windows that require rewrites during planning.
+      db.addBuiltin(AggregateFunction.createAnalyticBuiltin(
+          db, "first_value_rewrite", Lists.newArrayList(t, Type.BIGINT), t, t,
+          t.isStringType() ? initNullString : initNull,
+          prefix + FIRST_VALUE_REWRITE_UPDATE_SYMBOL.get(t),
+          null,
+          t == Type.STRING ? stringValGetValue : null,
           t == Type.STRING ? stringValSerializeOrFinalize : null,
           false));
 

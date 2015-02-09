@@ -14,6 +14,10 @@
 
 package com.cloudera.impala.analysis;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+
 import com.cloudera.impala.catalog.Catalog;
 import com.cloudera.impala.catalog.Db;
 import com.cloudera.impala.catalog.Function;
@@ -293,4 +297,43 @@ public class CastExpr extends Expr {
 
   @Override
   public Expr clone() { return new CastExpr(this); }
+
+  public Type getTargetType() {
+    return targetType_;
+  }
+
+  /**
+   * Get a Calendar instance if it represents a date
+   *
+   * @return Calendar with the date of the value
+   * @throws AnalysisException If not represent a date.
+   */
+  public Calendar toCalendar() throws ParseException, AnalysisException {
+
+    if(targetType_ != Type.TIMESTAMP)
+      throw new AnalysisException("could not get the date from "
+          + getClass().getSimpleName() + " (" + toSql() + ", it should be a "
+          + "cast to timestamp with the date [and time].");
+
+    Expr child0 = getChild(0);
+
+    if(!(child0 instanceof StringLiteral))
+      throw new AnalysisException("could not get the date from "
+          + child0.getClass().getSimpleName() + " (" + child0.toSql() + ", "
+          + "the date should be represented in a string.");
+
+    String string = ((StringLiteral) child0).getStringValue();
+
+    SimpleDateFormat sdf;
+    if(!string.contains(":"))
+      sdf = new SimpleDateFormat("yyyy-M-dd");
+    else
+      sdf = new SimpleDateFormat("yyyy-M-dd hh:mm:ss");
+
+    Calendar cal = Calendar.getInstance();
+    cal.setTime(sdf.parse(string));
+
+    return cal;
+  }
+
 }

@@ -1,10 +1,5 @@
 target
 
-# Eclipse artifacts
-.classpath
-.settings
-.project
-
 # IntelliJ artifacts
 .idea
 *.iml
@@ -38,3 +33,4 @@ generated-sources
 derby.log
 
 TempStatsStore
+/bin/
