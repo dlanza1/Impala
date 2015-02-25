@@ -34,7 +34,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStorageLocation;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -535,7 +534,7 @@ public class HdfsTable extends Table {
                 getName(), type.toString(), s.getName()));
       }
 
-      Column col = new Column(s.getName(), type, s.getComment(), pos);
+      Column col = Column.create(s.getName(), type, s.getComment(), pos);
       addColumn(col);
       ++pos;
 
@@ -1394,4 +1393,5 @@ public class HdfsTable extends Table {
     }
     return result;
   }
+
 }

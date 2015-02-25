@@ -14,11 +14,12 @@
 
 package com.cloudera.impala.catalog;
 
+import java.util.LinkedList;
+
 import org.apache.hadoop.hive.metastore.api.ColumnStatisticsData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.cloudera.impala.planner.AutoPartitionPruning;
 import com.cloudera.impala.thrift.TColumn;
 import com.cloudera.impala.thrift.TColumnStats;
 import com.google.common.base.Objects;
@@ -38,33 +39,37 @@ public class Column {
   protected final ColumnStats stats_;
 
   /**
-   * Virtual column (applied for automatic partition pruning)
+   * If this column is used for automatic partition
+   * pruning as a column that can prune partitions,
+   * these ones are the virtual columns that can be applied.
    */
-  protected boolean virtual;
+  protected LinkedList<Column> aplicable_columns;
 
-  /**
-   * If it's a virtual column, this is the name of the column
-   * which this one should to be applied
-   */
-  protected String column_to_be_applied;
-
-  public Column(String name, Type type, int position) {
+  protected Column(String name, Type type, int position) {
     this(name, type, null, position);
   }
 
-  public Column(String name, Type type, String comment, int position) {
+  protected Column(String name, Type type, String comment, int position) {
     name_ = name;
     type_ = type;
     comment_ = comment;
     position_ = position;
     stats_ = new ColumnStats(type);
 
-    int index_part_subs = name.indexOf(AutoPartitionPruning.PARTITIONING_SUBSTRING);
-    virtual = index_part_subs > 0
-        && index_part_subs + AutoPartitionPruning.PARTITIONING_SUBSTRING.length() < name.length();
+    aplicable_columns = null;
+  }
 
-    if(virtual)
-      column_to_be_applied = name.substring(0, index_part_subs);
+  public static Column create(String name, Type type, String comment, int pos) {
+    int index_part_subs = name.indexOf(VirtualColumn.SUBSTRING);
+
+    boolean virtual = index_part_subs > 0
+        && (index_part_subs + VirtualColumn.SUBSTRING.length()) < name.length();
+
+    if(virtual){
+      return new VirtualColumn(name, type, comment, pos);
+    }else{
+      return new Column(name, type, comment, pos);
+    }
   }
 
   public String getComment() { return comment_; }
@@ -109,7 +114,7 @@ public class Column {
           Type.fromThrift(columnDesc.getColumnType()), comment, position);
     } else {
       // Hdfs table column.
-      col = new Column(columnDesc.getColumnName(),
+      col = Column.create(columnDesc.getColumnName(),
           Type.fromThrift(columnDesc.getColumnType()), comment, position);
     }
     if (columnDesc.isSetCol_stats()) col.updateStats(columnDesc.getCol_stats());
@@ -128,37 +133,20 @@ public class Column {
    * Check if automatic partition pruning can be applied
    * with this column
    *
-   * @param tbl_ Owner table of this column
    * @return True if can be used for this purpose, otherwise false
    */
-  public boolean canBeAppliedAutomaticPartitioning(HdfsTable tbl_) {
-    // Check if is a partitioning column
-    if (getPosition() < tbl_.getNumClusteringCols())
-      return false;
-
-    for (Column table_column : tbl_.getColumns()) {
-      if (table_column.isVirtual() && table_column.getColumnToBeApplied().equals(name_)) {
-        return true;
-      }
-    }
-
-    return false;
+  public boolean canBeAppliedAutomaticPartitionPrunning() {
+    return aplicable_columns != null && aplicable_columns.size() > 0;
   }
 
-  public String getColumnToBeApplied() {
-    if(isVirtual())
-      return column_to_be_applied;
-    else
-      return null;
+  protected void addApplicableColumn(VirtualColumn virtual_col) throws TableLoadingException {
+    if(aplicable_columns == null)
+      aplicable_columns = new LinkedList<Column>();
+
+    aplicable_columns.add(virtual_col);
   }
 
-  protected boolean isVirtual() {
-    return virtual;
+  public LinkedList<Column> getAplicableColumns(){
+    return aplicable_columns;
   }
-
-  public void setNotVirtual() {
-    virtual = false;
-    column_to_be_applied = null;
-  }
-
 }

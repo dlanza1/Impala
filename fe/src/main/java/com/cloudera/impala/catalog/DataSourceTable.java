@@ -141,7 +141,7 @@ public class DataSourceTable extends Table {
       throws TableLoadingException {
     int pos = 0;
     for (FieldSchema s: fieldSchemas) {
-      Column col = new Column(s.getName(), parseColumnType(s), s.getComment(), pos);
+      Column col = Column.create(s.getName(), parseColumnType(s), s.getComment(), pos);
       Preconditions.checkArgument(isSupportedColumnType(col.getType()));
       addColumn(col);
       ++pos;

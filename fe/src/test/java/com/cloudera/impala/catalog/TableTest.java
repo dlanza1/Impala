@@ -1,5 +1,6 @@
 package com.cloudera.impala.catalog;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -43,27 +44,28 @@ public class TableTest {
       }
     };
 
-    tab.addColumn(new Column("col_1", Type.NULL, 1));
-    tab.addColumn(new Column("col_2", Type.NULL, 2));
-    tab.addColumn(new Column("col_3", Type.NULL, 3));
-    assertFalse(tab.hasVirtualColumns());
+    Column col1 = Column.create("col_1", Type.NULL, null, 1);
+    tab.addColumn(col1);
+    Column col2 = Column.create("col_2", Type.NULL, null, 2);
+    tab.addColumn(col1);
+    Column col3 = Column.create("col_1", Type.NULL, null, 3);
+    tab.addColumn(col1);
+    Column col4 = Column.create("col_1_part_month", Type.NULL, null, 4);
+    tab.addColumn(col4);
 
-    tab.addColumn(new Column("col_4_part_month", Type.NULL, 4));
-    assertTrue(tab.hasVirtualColumns());
+    assertFalse(col1.canBeAppliedAutomaticPartitionPrunning());
+    assertFalse(col2.canBeAppliedAutomaticPartitionPrunning());
+    assertFalse(col3.canBeAppliedAutomaticPartitionPrunning());
+    assertFalse(col4.canBeAppliedAutomaticPartitionPrunning());
 
-    tab.clearColumns();
-    assertFalse(tab.hasVirtualColumns());
+    tab.computeVirtualColumns();
 
-    tab.addColumn(new Column("col_1_part_month", Type.NULL, 1));
-    assertTrue(tab.hasVirtualColumns());
-
-    tab.addColumn(new Column("col_2", Type.NULL, 2));
-    tab.addColumn(new Column("col_3", Type.NULL, 3));
-    tab.addColumn(new Column("col_4", Type.NULL, 4));
-    assertTrue(tab.hasVirtualColumns());
-
-    tab.addColumn(new Column("col_5_part_month", Type.NULL, 5));
-    assertTrue(tab.hasVirtualColumns());
+    assertTrue(col1.canBeAppliedAutomaticPartitionPrunning());
+    assertEquals(col1, ((VirtualColumn) col4).getColumnInWhichApplies());
+    assertEquals(col1.getAplicableColumns().getFirst(), col4);
+    assertFalse(col2.canBeAppliedAutomaticPartitionPrunning());
+    assertFalse(col3.canBeAppliedAutomaticPartitionPrunning());
+    assertFalse(col4.canBeAppliedAutomaticPartitionPrunning());
   }
 
 }

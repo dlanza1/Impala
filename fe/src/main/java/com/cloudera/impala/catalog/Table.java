@@ -16,6 +16,7 @@ package com.cloudera.impala.catalog;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -70,11 +71,7 @@ public abstract class Table implements CatalogObject {
   // estimated number of rows in table; -1: unknown.
   protected long numRows_ = -1;
 
-  /**
-   * Has this table virtual columns?
-   * Note: use by automatic partition pruning
-   */
-  private boolean hasVirtualColumns;
+  private final LinkedList<VirtualColumn> virtualColumns_;
 
   // colsByPos[i] refers to the ith column in the table. The first numClusteringCols are
   // the clustering columns.
@@ -99,9 +96,9 @@ public abstract class Table implements CatalogObject {
     owner_ = owner;
     colsByPos_ = Lists.newArrayList();
     colsByName_ = Maps.newHashMap();
+    virtualColumns_ = Lists.newLinkedList();
     lastDdlTime_ = (msTable_ != null) ?
         CatalogServiceCatalog.getLastDdlTime(msTable_) : -1;
-    hasVirtualColumns = false;
   }
 
   //number of nodes that contain data for this table; -1: unknown
@@ -120,14 +117,14 @@ public abstract class Table implements CatalogObject {
     colsByPos_.add(col);
     colsByName_.put(col.getName().toLowerCase(), col);
 
-    if(!hasVirtualColumns)
-      hasVirtualColumns = col.isVirtual();
+    if(col instanceof VirtualColumn)
+      virtualColumns_.add((VirtualColumn) col);
   }
 
   public void clearColumns() {
     colsByPos_.clear();
     colsByName_.clear();
-    hasVirtualColumns = false;
+    virtualColumns_.clear();;
   }
 
   /**
@@ -242,7 +239,7 @@ public abstract class Table implements CatalogObject {
     fields_ = new ArrayList<FieldSchema>();
     colsByPos_.clear();
     colsByPos_.ensureCapacity(columns.size());
-    hasVirtualColumns = false;
+    virtualColumns_.clear();
     for (int i = 0; i < columns.size(); ++i) {
       Column col = Column.fromThrift(columns.get(i));
       colsByPos_.add(col.getPosition(), col);
@@ -250,16 +247,11 @@ public abstract class Table implements CatalogObject {
       fields_.add(new FieldSchema(col.getName(),
         col.getType().toString().toLowerCase(), col.getComment()));
 
-      if(col.isVirtual()){
-        //Check if the virtual column is a clustering column
-        //A virtual column must be a clustering column
-        if(i >= numClusteringCols_){
-          col.setNotVirtual();
-        }else{
-          hasVirtualColumns = true;
-        }
-      }
+      if(col instanceof VirtualColumn)
+        virtualColumns_.add((VirtualColumn) col);
     }
+
+    computeVirtualColumns();
 
     // Estimated number of rows
     numRows_ = thriftTable.isSetTable_stats() ?
@@ -280,6 +272,20 @@ public abstract class Table implements CatalogObject {
         throw new TableLoadingException(
             "Expected lower case column name but found: " + colName);
       }
+    }
+  }
+
+  public void computeVirtualColumns(){
+    try {
+      LOG.debug("----"+virtualColumns_.size());
+      for(VirtualColumn virtual_col:virtualColumns_){
+        Column normal_col = colsByName_.get(virtual_col.getColumnNameInWhichApplies());
+        virtual_col.setColumnToBeApplied(normal_col);
+      }
+    } catch (TableLoadingException e) {
+      LOG.debug("could not be applied because there was an error computing the "
+          + "virtual columns for this table (" + name_ + ")");
+      e.printStackTrace();
     }
   }
 
@@ -417,11 +423,4 @@ public abstract class Table implements CatalogObject {
   @Override
   public boolean isLoaded() { return true; }
 
-  /**
-   * Has this table virtual columns?
-   * @return True - has virtual columns, False - does not have virtual columns
-   */
-  public boolean hasVirtualColumns(){
-    return hasVirtualColumns;
-  }
 }

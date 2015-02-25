@@ -209,7 +209,7 @@ public class InlineViewRef extends TableRef {
       }
 
       // create a column and add it to the inline view
-      Column col = new Column(colAlias, selectItemExpr.getType(), i);
+      Column col = Column.create(colAlias, selectItemExpr.getType(), null, i);
       inlineView.addColumn(col);
     }
 

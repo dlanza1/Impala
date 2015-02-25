@@ -55,33 +55,15 @@ public class AutoPartitionPruning {
 			ArrayList<TupleId> tupleIds_, List<Expr> simpleFilterConjuncts,
 			List<HdfsPartitionFilter> partitionFilters){
 
-		if (!tbl_.hasVirtualColumns()) {
-      LOG.debug("could not be applied because this table (" +
-            tbl_.getName() + ") does not have virtual columns (with _part_ in the name).");
-      return;
-    }
-
-		if (conjuncts_.size() < 1) {
-			LOG.debug("could not be applied because this table (" +
-            tbl_.getName() + ") does not have conjuncts to apply it.");
-			return;
-		}
-
 		long time_start = System.currentTimeMillis();
 
 		List<SlotId> partitionSlots = Lists.newArrayList();
 		for (SlotDescriptor slotDesc : analyzer.getDescTbl().getTupleDesc(tupleIds_.get(0)).getSlots()) {
 			Preconditions.checkState(slotDesc.getColumn() != null);
-			if (slotDesc.getColumn().canBeAppliedAutomaticPartitioning(tbl_)) {
+			if (slotDesc.getColumn().canBeAppliedAutomaticPartitionPrunning()) {
 				partitionSlots.add(slotDesc.getId());
-				LOG.debug("Susceptible column: "
-						+ slotDesc.getColumn().getName());
+				LOG.debug("Susceptible column: " + slotDesc.getColumn().getName());
 			}
-		}
-
-		if (partitionSlots.size() < 1) {
-			LOG.debug("Could not be applied because there are no susceptible columns to apply it.");
-			return;
 		}
 
 		boolean applied = false;
@@ -155,11 +137,11 @@ public class AutoPartitionPruning {
 
       LOG.debug("Filter created: " + conjunct.toSql());
     } catch (IllegalStateException e) {
-      LOG.debug("There was an error creating the filter to: (" + conjunct.toSql() + ") because "
+      LOG.debug("there was an error creating the filter to: (" + conjunct.toSql() + ") because "
           + e.getMessage());
       e.printStackTrace();
     } catch (Exception e) {
-      LOG.debug("There was an error creating the filter to: (" + conjunct.toSql() + ") because "
+      LOG.debug("there was an error creating the filter to: (" + conjunct.toSql() + ") because "
           + e.getMessage());
       e.printStackTrace();
     }
@@ -270,4 +252,5 @@ public class AutoPartitionPruning {
     if(!COMPATIBLE_FUNCTIONS.contains(function_name.toLowerCase()))
       throw new AnalysisException("the function " + function_name + " is not compatible");
   }
+
 }

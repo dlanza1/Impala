@@ -461,6 +461,7 @@ public class HdfsScanNode extends ScanNode {
    */
   private void prunePartitions(Analyzer analyzer) throws InternalException {
     DescriptorTable descTbl = analyzer.getDescTbl();
+
     // loop through all partitions and prune based on applicable conjuncts;
     // start with creating a collection of partition filters for the applicable conjuncts
     List<SlotId> partitionSlots = Lists.newArrayList();
@@ -468,8 +469,12 @@ public class HdfsScanNode extends ScanNode {
       Preconditions.checkState(slotDesc.getColumn() != null);
       if (slotDesc.getColumn().getPosition() < tbl_.getNumClusteringCols()) {
         partitionSlots.add(slotDesc.getId());
+      }else if (slotDesc.getColumn().canBeAppliedAutomaticPartitionPrunning()) {
+//        partitionSlots.add(slotDesc.getId());
+        LOG.debug("AutoPartitionPruning: susceptible column " + slotDesc.getColumn().getName());
       }
     }
+
     List<HdfsPartitionFilter> partitionFilters = Lists.newArrayList();
     // Conjuncts that can be evaluated from the partition key values.
     List<Expr> simpleFilterConjuncts = Lists.newArrayList();
@@ -497,12 +502,12 @@ public class HdfsScanNode extends ScanNode {
       new AutoPartitionPruning(analyzer, tbl_).applyFilters(
           conjuncts_, tupleIds_, simpleFilterConjuncts, partitionFilters);
     } catch (IllegalStateException e){
-      LOG.debug("There was an error (" + e.getMessage() + ") trying to apply automatic partitioning, "
+      LOG.debug("there was an error (" + e.getMessage() + ") trying to apply automatic partitioning, "
           + "so it was not applied.");
 
       e.printStackTrace();
     } catch (Exception e) {
-      LOG.debug("There was an error (" + e.getMessage() + ") trying to apply automatic partitioning, "
+      LOG.debug("there was an error (" + e.getMessage() + ") trying to apply automatic partitioning, "
           + "so it was not applied.");
 
       e.printStackTrace();

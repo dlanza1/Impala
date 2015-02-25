@@ -72,7 +72,7 @@ public class AvroSchemaParser {
     List<Column> cols = Lists.newArrayList();
     for (int i = 0; i < schema.getFields().size(); ++i) {
       Schema.Field field = schema.getFields().get(i);
-      cols.add(new Column(field.name(), getTypeInfo(field.schema(), field.name()), i));
+      cols.add(Column.create(field.name(), getTypeInfo(field.schema(), field.name()), null, i));
     }
     return cols;
   }

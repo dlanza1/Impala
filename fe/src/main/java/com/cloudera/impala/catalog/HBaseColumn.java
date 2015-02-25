@@ -61,4 +61,9 @@ public class HBaseColumn extends Column implements Comparable<HBaseColumn> {
     colDesc.setIs_binary(binaryEncoded_);
     return colDesc;
   }
+
+  @Override
+  public boolean canBeAppliedAutomaticPartitionPrunning() {
+    return false;
+  }
 }

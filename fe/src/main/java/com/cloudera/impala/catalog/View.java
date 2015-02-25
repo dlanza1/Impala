@@ -88,7 +88,7 @@ public class View extends Table {
       for (int i = 0; i < fieldSchemas.size(); ++i) {
         FieldSchema s = fieldSchemas.get(i);
         Type type = parseColumnType(s);
-        Column col = new Column(s.getName(), type, s.getComment(), i);
+        Column col = Column.create(s.getName(), type, s.getComment(), i);
         addColumn(col);
       }
       // These fields are irrelevant for views.
