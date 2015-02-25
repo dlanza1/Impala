@@ -14,11 +14,14 @@
 
 package com.cloudera.impala.service;
 
+import java.util.List;
+
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.ql.metadata.formatting.MetaDataFormatUtils;
 
 import com.cloudera.impala.catalog.Column;
 import com.cloudera.impala.catalog.Table;
+import com.cloudera.impala.catalog.VirtualColumn;
 import com.cloudera.impala.thrift.TColumnValue;
 import com.cloudera.impala.thrift.TDescribeTableOutputStyle;
 import com.cloudera.impala.thrift.TDescribeTableResult;
@@ -56,7 +59,8 @@ public class DescribeResultFactory {
       TColumnValue colNameCol = new TColumnValue();
       colNameCol.setString_val(column.getName());
       TColumnValue dataTypeCol = new TColumnValue();
-      dataTypeCol.setString_val(column.getType().toSql().toLowerCase());
+      dataTypeCol.setString_val(column.getType().toSql().toLowerCase()
+          + (column instanceof VirtualColumn ? " (virtual)":""));
       TColumnValue commentCol = new TColumnValue();
       commentCol.setString_val(column.getComment() != null ? column.getComment() : "");
       descResult.results.add(
@@ -94,7 +98,7 @@ public class DescribeResultFactory {
     StringBuilder sb = new StringBuilder();
     // First add all the columns (includes partition columns).
     sb.append(MetaDataFormatUtils.getAllColumnsInformation(msTable.getSd().getCols(),
-        msTable.getPartitionKeys(), true, false, true));
+        setVirtuals(msTable.getPartitionKeys(), table), true, false, true));
     // Add the extended table metadata information.
     sb.append(MetaDataFormatUtils.getTableInformation(hiveTable));
 
@@ -115,5 +119,14 @@ public class DescribeResultFactory {
       descResult.results.add(resultRow);
     }
     return descResult;
+  }
+
+  private static List<FieldSchema> setVirtuals(List<FieldSchema> cols, Table table) {
+    for (FieldSchema fieldSchema : cols) {
+      if(table.getColumn(fieldSchema.getName()) instanceof VirtualColumn)
+        fieldSchema.setType(fieldSchema.getType() + " (virtual)");
+    }
+
+    return cols;
   }
 }
