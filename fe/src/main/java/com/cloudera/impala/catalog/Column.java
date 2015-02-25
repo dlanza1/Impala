@@ -35,8 +35,18 @@ public class Column {
   protected final Type type_;
   protected final String comment_;
   protected int position_;  // in table
-
   protected final ColumnStats stats_;
+
+  /**
+   * Virtual column (applied for automatic partition pruning)
+   */
+  protected boolean virtual;
+
+  /**
+   * If it's a virtual column, this is the name of the column
+   * which this one should to be applied
+   */
+  protected String column_to_be_applied;
 
   public Column(String name, Type type, int position) {
     this(name, type, null, position);
@@ -48,6 +58,13 @@ public class Column {
     comment_ = comment;
     position_ = position;
     stats_ = new ColumnStats(type);
+
+    int index_part_subs = name.indexOf(AutoPartitionPruning.PARTITIONING_SUBSTRING);
+    virtual = index_part_subs > 0
+        && index_part_subs + AutoPartitionPruning.PARTITIONING_SUBSTRING.length() < name.length();
+
+    if(virtual)
+      column_to_be_applied = name.substring(0, index_part_subs);
   }
 
   public String getComment() { return comment_; }
@@ -119,15 +136,29 @@ public class Column {
     if (getPosition() < tbl_.getNumClusteringCols())
       return false;
 
-    String subtring_part = getName()
-        + AutoPartitionPruning.PARTITIONING_SUBSTRING;
-
-    for (Column column : tbl_.getColumns()) {
-      if (column.getName().startsWith(subtring_part)) {
+    for (Column table_column : tbl_.getColumns()) {
+      if (table_column.isVirtual() && table_column.getColumnToBeApplied().equals(name_)) {
         return true;
       }
     }
 
     return false;
   }
+
+  public String getColumnToBeApplied() {
+    if(isVirtual())
+      return column_to_be_applied;
+    else
+      return null;
+  }
+
+  protected boolean isVirtual() {
+    return virtual;
+  }
+
+  public void setNotVirtual() {
+    virtual = false;
+    column_to_be_applied = null;
+  }
+
 }

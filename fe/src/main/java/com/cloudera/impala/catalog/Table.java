@@ -70,6 +70,12 @@ public abstract class Table implements CatalogObject {
   // estimated number of rows in table; -1: unknown.
   protected long numRows_ = -1;
 
+  /**
+   * Has this table virtual columns?
+   * Note: use by automatic partition pruning
+   */
+  private boolean hasVirtualColumns;
+
   // colsByPos[i] refers to the ith column in the table. The first numClusteringCols are
   // the clustering columns.
   private final ArrayList<Column> colsByPos_;
@@ -95,6 +101,7 @@ public abstract class Table implements CatalogObject {
     colsByName_ = Maps.newHashMap();
     lastDdlTime_ = (msTable_ != null) ?
         CatalogServiceCatalog.getLastDdlTime(msTable_) : -1;
+    hasVirtualColumns = false;
   }
 
   //number of nodes that contain data for this table; -1: unknown
@@ -112,11 +119,15 @@ public abstract class Table implements CatalogObject {
   public void addColumn(Column col) {
     colsByPos_.add(col);
     colsByName_.put(col.getName().toLowerCase(), col);
+
+    if(!hasVirtualColumns)
+      hasVirtualColumns = col.isVirtual();
   }
 
   public void clearColumns() {
     colsByPos_.clear();
     colsByName_.clear();
+    hasVirtualColumns = false;
   }
 
   /**
@@ -226,18 +237,29 @@ public abstract class Table implements CatalogObject {
     columns.addAll(thriftTable.getClustering_columns());
     columns.addAll(thriftTable.getColumns());
 
+    numClusteringCols_ = thriftTable.getClustering_columns().size();
+
     fields_ = new ArrayList<FieldSchema>();
     colsByPos_.clear();
     colsByPos_.ensureCapacity(columns.size());
+    hasVirtualColumns = false;
     for (int i = 0; i < columns.size(); ++i) {
       Column col = Column.fromThrift(columns.get(i));
       colsByPos_.add(col.getPosition(), col);
       colsByName_.put(col.getName().toLowerCase(), col);
       fields_.add(new FieldSchema(col.getName(),
         col.getType().toString().toLowerCase(), col.getComment()));
-    }
 
-    numClusteringCols_ = thriftTable.getClustering_columns().size();
+      if(col.isVirtual()){
+        //Check if the virtual column is a clustering column
+        //A virtual column must be a clustering column
+        if(i >= numClusteringCols_){
+          col.setNotVirtual();
+        }else{
+          hasVirtualColumns = true;
+        }
+      }
+    }
 
     // Estimated number of rows
     numRows_ = thriftTable.isSetTable_stats() ?
@@ -394,4 +416,12 @@ public abstract class Table implements CatalogObject {
 
   @Override
   public boolean isLoaded() { return true; }
+
+  /**
+   * Has this table virtual columns?
+   * @return True - has virtual columns, False - does not have virtual columns
+   */
+  public boolean hasVirtualColumns(){
+    return hasVirtualColumns;
+  }
 }

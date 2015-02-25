@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <jardesc>
-    <jar path="/home/dlanza/impala-frontend-0.1-SNAPSHOT.jar"/>
-    <options buildIfNeeded="true" compress="true" descriptionLocation="/Impala-fe/export.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="false" overwrite="false" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
+    <jar path="/Users/daniellanzagarcia/Downloads/impala-frontend-0.1-SNAPSHOT.jar"/>
+    <options buildIfNeeded="true" compress="true" descriptionLocation="/Impala-fe/p.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="false" overwrite="false" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
     <storedRefactorings deprecationInfo="true" structuralOnly="false"/>
     <selectedProjects/>
     <manifest generateManifest="true" manifestLocation="" manifestVersion="1.0" reuseManifest="false" saveManifest="false" usesManifest="true">
@@ -11,7 +11,12 @@
         </sealing>
     </manifest>
     <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
+        <file path="/Impala-fe/.project"/>
+        <file path="/Impala-fe/.gitignore"/>
+        <file path="/Impala-fe/pom.xml"/>
+        <folder path="/Impala-fe/src"/>
         <javaElement handleIdentifier="=Impala-fe/src\/main\/java"/>
         <javaElement handleIdentifier="=Impala-fe/lib_from_cluster\/impala-frontend-0.1-SNAPSHOT.jar"/>
+        <javaElement handleIdentifier="=Impala-fe/src\/test\/java"/>
     </selectedElements>
 </jardesc>

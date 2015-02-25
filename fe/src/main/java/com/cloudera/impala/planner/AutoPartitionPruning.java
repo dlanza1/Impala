@@ -55,12 +55,19 @@ public class AutoPartitionPruning {
 			ArrayList<TupleId> tupleIds_, List<Expr> simpleFilterConjuncts,
 			List<HdfsPartitionFilter> partitionFilters){
 
-		long time_start = System.currentTimeMillis();
+		if (!tbl_.hasVirtualColumns()) {
+      LOG.debug("could not be applied because this table (" +
+            tbl_.getName() + ") does not have virtual columns (with _part_ in the name).");
+      return;
+    }
 
 		if (conjuncts_.size() < 1) {
-			LOG.debug("Could not be applied because there are no conjuncts to apply it.");
+			LOG.debug("could not be applied because this table (" +
+            tbl_.getName() + ") does not have conjuncts to apply it.");
 			return;
 		}
+
+		long time_start = System.currentTimeMillis();
 
 		List<SlotId> partitionSlots = Lists.newArrayList();
 		for (SlotDescriptor slotDesc : analyzer.getDescTbl().getTupleDesc(tupleIds_.get(0)).getSlots()) {

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src/main/java"/>
+	<classpathentry exported="true" kind="lib" path="lib_from_cluster/impala-frontend-0.1-SNAPSHOT.jar"/>
 	<classpathentry kind="src" path="src/test/java"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
@@ -168,6 +169,5 @@
 	<classpathentry kind="lib" path="lib_from_cluster/xmlenc-0.52.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/xz-1.0.jar"/>
 	<classpathentry kind="lib" path="lib_from_cluster/zookeeper.jar"/>
-	<classpathentry kind="lib" path="lib_from_cluster/impala-frontend-0.1-SNAPSHOT.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
