@@ -43,7 +43,7 @@ public class Column {
    * pruning as a column that can prune partitions,
    * these ones are the virtual columns that can be applied.
    */
-  protected LinkedList<Column> aplicable_columns;
+  protected LinkedList<VirtualColumn> aplicable_columns;
 
   protected Column(String name, Type type, int position) {
     this(name, type, null, position);
@@ -141,12 +141,12 @@ public class Column {
 
   protected void addApplicableColumn(VirtualColumn virtual_col) throws TableLoadingException {
     if(aplicable_columns == null)
-      aplicable_columns = new LinkedList<Column>();
+      aplicable_columns = new LinkedList<VirtualColumn>();
 
     aplicable_columns.add(virtual_col);
   }
 
-  public LinkedList<Column> getAplicableColumns(){
+  public LinkedList<VirtualColumn> getAplicableColumns(){
     return aplicable_columns;
   }
 }

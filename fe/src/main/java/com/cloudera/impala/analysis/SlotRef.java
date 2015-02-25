@@ -21,9 +21,9 @@ import java.util.List;
 import java.util.Set;
 
 import com.cloudera.impala.analysis.ArithmeticExpr.Operator;
-import com.cloudera.impala.catalog.Column;
 import com.cloudera.impala.catalog.HdfsTable;
 import com.cloudera.impala.catalog.Type;
+import com.cloudera.impala.catalog.VirtualColumn;
 import com.cloudera.impala.common.AnalysisException;
 import com.cloudera.impala.common.Pair;
 import com.cloudera.impala.planner.AutoPartitionPruning;
@@ -249,26 +249,20 @@ public class SlotRef extends Expr {
           + "the column (" + getColumnName()
           + ") is already a partitioning column.");
 
-    String subtring_part = getDesc().getColumn().getName()
-        + AutoPartitionPruning.PARTITIONING_SUBSTRING;
-
     boolean part_by_time = false;
-    for (Column column : tbl_.getColumns()) {
+    for (VirtualColumn column : getDesc().getColumn().getAplicableColumns()) {
       String column_name = column.getName();
 
-      if (column_name.contains(subtring_part)) {
+      SlotRef part_slotRef = new SlotRef(getTableName(), column_name);
+      part_slotRef.analyze(analyzer.getAnalzer(getSlotId()));
+      analyzer.createIdentityEquivClasses();
+      slots_part.add(part_slotRef);
 
-        SlotRef part_slotRef = new SlotRef(getTableName(), column_name);
-        part_slotRef.analyze(analyzer.getAnalzer(getSlotId()));
-        analyzer.createIdentityEquivClasses();
-        slots_part.add(part_slotRef);
-
-        if(column_name.endsWith(AutoPartitionPruning.PARTITIONING_SUBSTRING + "year")
+      if(column_name.endsWith(AutoPartitionPruning.PARTITIONING_SUBSTRING + "year")
             || column_name.endsWith(AutoPartitionPruning.PARTITIONING_SUBSTRING + "month")
             || column_name.endsWith(AutoPartitionPruning.PARTITIONING_SUBSTRING + "day")
             || column_name.endsWith(AutoPartitionPruning.PARTITIONING_SUBSTRING + "hour")){
-          part_by_time = true;
-        }
+        part_by_time = true;
       }
     }
 
