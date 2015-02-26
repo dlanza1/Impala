@@ -327,20 +327,14 @@ public class BinaryPredicate extends Predicate {
                                 .getColumn().getAplicableColumns(between_bounds);
     Expr out_pred = null;
     for (VirtualColumn virtualColumn : virtual_columns) {
-      FunctionCallExpr func = virtualColumn.getPartitionFunction(
+      FunctionCallExpr func = virtualColumn.getFunction(
           getSlotBinding(getBoundSlot().getSlotId()));
       Operator op = getOperatorForAutoPartitionPruning(func.getFnName(), getOp());
       Expr pred = new BinaryPredicate(op, virtualColumn.newSlotRef(analyzer), func);
 
       //Concatenate predicates
-      if (out_pred == null) {
-        out_pred = pred;
-      } else {
-        out_pred = new CompoundPredicate(
-                            CompoundPredicate.Operator.AND,
-                            pred,
-                            out_pred);
-      }
+      out_pred = (out_pred == null) ? pred :
+        new CompoundPredicate(CompoundPredicate.Operator.AND, pred, out_pred);
     }
 
     return out_pred;

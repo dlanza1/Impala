@@ -14,16 +14,18 @@
 
 package com.cloudera.impala.catalog;
 
+import java.util.Calendar;
+import java.util.HashMap;
 import java.util.LinkedList;
 
 import org.apache.hadoop.hive.metastore.api.ColumnStatisticsData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.cloudera.impala.analysis.CastExpr;
 import com.cloudera.impala.analysis.Expr;
 import com.cloudera.impala.common.AnalysisException;
 import com.cloudera.impala.common.Pair;
-import com.cloudera.impala.planner.AutoPartitionPruningHelper;
 import com.cloudera.impala.thrift.TColumn;
 import com.cloudera.impala.thrift.TColumnStats;
 import com.google.common.base.Objects;
@@ -151,10 +153,92 @@ public class Column {
   }
 
   public LinkedList<VirtualColumn> getAplicableColumns(Pair<Expr, Expr> between_bounds) throws AnalysisException{
-    if(aplicable_columns == null)
-      return null;
+    if(aplicable_columns == null || aplicable_columns.size() == 1 || useMonotonicFunctions())
+      return aplicable_columns;
 
-    boolean part_by_time = false;
+    LinkedList<VirtualColumn> valid_part_columns = new LinkedList<VirtualColumn>();
+    HashMap<String, VirtualColumn> part_columns_map = getPartitionColumnsMap(aplicable_columns);
+
+    try{
+      Calendar lower_cal = ((CastExpr) between_bounds.first).toCalendar();
+      Calendar upper_cal = ((CastExpr) between_bounds.second).toCalendar();
+
+      if(part_columns_map.containsKey("year")){
+        valid_part_columns.add(part_columns_map.get("year"));
+
+        if(upper_cal.get(Calendar.YEAR) != lower_cal.get(Calendar.YEAR))
+          return valid_part_columns;
+      }else
+        throw new IllegalStateException("could not be found a column for partitioning by year.");
+
+      if(part_columns_map.containsKey("month")){
+        valid_part_columns.add(part_columns_map.get("month"));
+
+        if(upper_cal.get(Calendar.MONTH) != lower_cal.get(Calendar.MONTH))
+          return valid_part_columns;
+      }else
+        return valid_part_columns;
+
+      if(part_columns_map.containsKey("day")){
+        valid_part_columns.add(part_columns_map.get("day"));
+
+        if(upper_cal.get(Calendar.DAY_OF_MONTH) != lower_cal.get(Calendar.DAY_OF_MONTH))
+          return valid_part_columns;
+      }else
+        return valid_part_columns;
+
+      if(part_columns_map.containsKey("hour")){
+        valid_part_columns.add(part_columns_map.get("hour"));
+
+        if(upper_cal.get(Calendar.HOUR) != lower_cal.get(Calendar.HOUR))
+          return valid_part_columns;
+      }else
+        return valid_part_columns;
+
+    }catch(IllegalStateException e){
+      LOG.debug("There was an error (" + e.getMessage() + ") when trying "
+          + "to obtain partition columns for between clause,"
+          + " the existing most coarse function will be used (amoung year, month, day or hour).");
+      e.printStackTrace();
+    }catch(Exception e){
+      LOG.debug("There was an error (" + e.getMessage() + ") when trying "
+          + "to obtain partition columns for between clause,"
+          + " the existing most coarse function will be used (amoung year, month, day or hour).");
+      e.printStackTrace();
+    }
+
+    if(valid_part_columns.size() < 1 && part_columns_map.containsKey("year"))
+      valid_part_columns.add(part_columns_map.get("year"));
+
+    if(valid_part_columns.size() < 1)
+      throw new IllegalStateException("could not be found any column for partitioning by time.");
+
+    return valid_part_columns;
+  }
+
+  /**
+   * Convert a list of partitioning columns into a HasMap where the key is
+   * the correspond partition function and the value is the partitioning column
+   *
+   * @param part_columns List of partitioning columns to convert
+   * @return HashMap where the key is the correspond partition
+   * function and the value is the partitioning column
+   * @throws AnalysisException
+   */
+  private static HashMap<String, VirtualColumn> getPartitionColumnsMap(LinkedList<VirtualColumn> virtual_columns)
+      throws AnalysisException {
+    HashMap<String, VirtualColumn> virtual_columns_map = new HashMap<String, VirtualColumn>();
+
+    for (VirtualColumn virtualColumn : virtual_columns){
+      virtual_columns_map.put(
+          virtualColumn.getFunction(null).getFnName().getFunction(),
+          virtualColumn);
+    }
+
+    return virtual_columns_map;
+  }
+
+  private boolean useMonotonicFunctions(){
     for (VirtualColumn virtual_column : aplicable_columns) {
       String virtual_column_name = virtual_column.getName();
 
@@ -162,14 +246,11 @@ public class Column {
             || virtual_column_name.endsWith(VirtualColumn.SUBSTRING + "month")
             || virtual_column_name.endsWith(VirtualColumn.SUBSTRING + "day")
             || virtual_column_name.endsWith(VirtualColumn.SUBSTRING + "hour")){
-        part_by_time = true;
+        return false;
       }
     }
 
-    //take care with partitioning by time and several columns
-    if(aplicable_columns.size() > 1 && part_by_time)
-      return AutoPartitionPruningHelper.getPartitioningColumnsForTime(aplicable_columns, between_bounds);
-
-    return aplicable_columns;
+    return true;
   }
+
 }

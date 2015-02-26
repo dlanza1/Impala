@@ -192,7 +192,6 @@ public class InPredicate extends Predicate {
 
   @Override
   public Expr applyVirtualColumns(Analyzer analyzer) throws AnalysisException {
-
     SlotRef bound_slot = getBoundSlot();
     if (bound_slot == null)
       return this;
@@ -206,19 +205,13 @@ public class InPredicate extends Predicate {
       ArrayList<Expr> inList = new ArrayList<Expr>();
       ArrayList<Expr> actualInList = (ArrayList<Expr>) getChildren().clone();
       actualInList.remove(0);
-      for (Expr expr : actualInList) inList.add(virtualColumn.getPartitionFunction(expr));
+      for (Expr expr : actualInList) inList.add(virtualColumn.getFunction(expr));
 
       Expr pred = new InPredicate(virtual_slotRef, inList, false);
 
       //Concatenate predicates
-      if(out_pred == null){
-        out_pred = pred;
-      }else{
-        out_pred = new CompoundPredicate(
-            CompoundPredicate.Operator.AND,
-            pred,
-            out_pred);
-      }
+      out_pred = (out_pred == null) ? pred :
+        new CompoundPredicate(CompoundPredicate.Operator.AND, pred, out_pred);
     }
 
     return out_pred;
