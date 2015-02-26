@@ -19,9 +19,9 @@ import java.util.LinkedList;
 
 import com.cloudera.impala.catalog.Db;
 import com.cloudera.impala.catalog.Function.CompareMode;
-import com.cloudera.impala.catalog.HdfsTable;
 import com.cloudera.impala.catalog.ScalarFunction;
 import com.cloudera.impala.catalog.Type;
+import com.cloudera.impala.catalog.VirtualColumn;
 import com.cloudera.impala.common.AnalysisException;
 import com.cloudera.impala.common.Pair;
 import com.cloudera.impala.common.Reference;
@@ -101,8 +101,20 @@ public class BinaryPredicate extends Predicate {
 
   private Operator op_;
 
+  /**
+   * If this binary predicate comes from a rewrite of a
+   * between predicate, it correspond to the other bound of the
+   * between predicate
+   */
+  private Expr between_bound_;
+
   public Operator getOp() { return op_; }
   public void setOp(Operator op) { op_ = op; }
+
+  public BinaryPredicate(Operator op, Expr e1, Expr e2, Expr between_bound) {
+    this(op, e1, e2);
+    between_bound_ = between_bound;
+  }
 
   public BinaryPredicate(Operator op, Expr e1, Expr e2) {
     super();
@@ -111,11 +123,13 @@ public class BinaryPredicate extends Predicate {
     children_.add(e1);
     Preconditions.checkNotNull(e2);
     children_.add(e2);
+    between_bound_ = null;
   }
 
   protected BinaryPredicate(BinaryPredicate other) {
     super(other);
     op_ = other.op_;
+    between_bound_ = other.between_bound_;
   }
 
   public boolean isNullMatchingEq() { return op_ == Operator.NULL_MATCHING_EQ; }
@@ -298,40 +312,38 @@ public class BinaryPredicate extends Predicate {
   public Expr clone() { return new BinaryPredicate(this); }
 
   @Override
-  public Expr applyAutoPartitionPruning(Analyzer analyzer, HdfsTable tbl_,
-      Pair<Expr, Expr> between_bounds) throws AnalysisException {
+  public Expr applyVirtualColumns(Analyzer analyzer) throws AnalysisException {
 
-    if (getBoundSlot() == null)
+    SlotRef bound_slot = getBoundSlot();
+    if (bound_slot == null)
       throw new IllegalStateException("is not of the form \"<SlotRef> op <Expr>\" or \"<Expr> op <SlotRef>\"");
 
-    LinkedList<SlotRef> part_columns = getBoundSlot()
-        .getColumnsForAutomaticPartitioning(analyzer, tbl_, between_bounds);
+    Pair<Expr, Expr> between_bounds = null;
+    if(between_bound_ != null){
+      between_bounds = new Pair<Expr, Expr>(children_.get(1), between_bound_);
+    }
 
+    LinkedList<VirtualColumn> virtual_columns = bound_slot.getDesc()
+                                .getColumn().getAplicableColumns(between_bounds);
     Expr out_pred = null;
-    for (SlotRef part_column : part_columns) {
-      Expr pred = toAutoPartitionPruning(part_column);
+    for (VirtualColumn virtualColumn : virtual_columns) {
+      FunctionCallExpr func = virtualColumn.getPartitionFunction(
+          getSlotBinding(getBoundSlot().getSlotId()));
+      Operator op = getOperatorForAutoPartitionPruning(func.getFnName(), getOp());
+      Expr pred = new BinaryPredicate(op, virtualColumn.newSlotRef(analyzer), func);
 
+      //Concatenate predicates
       if (out_pred == null) {
         out_pred = pred;
       } else {
         out_pred = new CompoundPredicate(
-            CompoundPredicate.Operator.AND,
-            pred,
-            out_pred);
+                            CompoundPredicate.Operator.AND,
+                            pred,
+                            out_pred);
       }
     }
 
     return out_pred;
-  }
-
-  @Override
-  public Expr toAutoPartitionPruning(SlotRef part_column) throws AnalysisException {
-    FunctionCallExpr func = part_column.getPartitionFunction(
-        getSlotBinding(getBoundSlot().getSlotId()));
-
-    Operator op = getOperatorForAutoPartitionPruning(func.getFnName(), getOp());
-
-    return new BinaryPredicate(op, part_column, func);
   }
 
   private Operator getOperatorForAutoPartitionPruning(FunctionName fnName, Operator op) {

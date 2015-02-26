@@ -20,12 +20,11 @@ import java.util.List;
 
 import com.cloudera.impala.catalog.Db;
 import com.cloudera.impala.catalog.Function.CompareMode;
-import com.cloudera.impala.catalog.HdfsTable;
 import com.cloudera.impala.catalog.PrimitiveType;
 import com.cloudera.impala.catalog.ScalarFunction;
 import com.cloudera.impala.catalog.Type;
+import com.cloudera.impala.catalog.VirtualColumn;
 import com.cloudera.impala.common.AnalysisException;
-import com.cloudera.impala.common.Pair;
 import com.cloudera.impala.common.Reference;
 import com.cloudera.impala.thrift.TExprNode;
 import com.cloudera.impala.thrift.TExprNodeType;
@@ -192,20 +191,26 @@ public class InPredicate extends Predicate {
   public Expr clone() { return new InPredicate(this); }
 
   @Override
-  public Expr applyAutoPartitionPruning(Analyzer analyzer, HdfsTable tbl_,
-      Pair<Expr, Expr> between_bounds) throws AnalysisException {
+  public Expr applyVirtualColumns(Analyzer analyzer) throws AnalysisException {
 
-    if (getBoundSlot() == null)
+    SlotRef bound_slot = getBoundSlot();
+    if (bound_slot == null)
       return this;
 
+    LinkedList<VirtualColumn> virtual_columns = bound_slot.getDesc()
+                                  .getColumn().getAplicableColumns(null);
     Expr out_pred = null;
+    for (VirtualColumn virtualColumn : virtual_columns) {
+      SlotRef virtual_slotRef = virtualColumn.newSlotRef(analyzer);
 
-    LinkedList<SlotRef> part_columns = getBoundSlot()
-                              .getColumnsForAutomaticPartitioning(analyzer, tbl_, between_bounds);
+      ArrayList<Expr> inList = new ArrayList<Expr>();
+      ArrayList<Expr> actualInList = (ArrayList<Expr>) getChildren().clone();
+      actualInList.remove(0);
+      for (Expr expr : actualInList) inList.add(virtualColumn.getPartitionFunction(expr));
 
-    for (SlotRef part_column : part_columns) {
-      Expr pred = toAutoPartitionPruning(part_column);
+      Expr pred = new InPredicate(virtual_slotRef, inList, false);
 
+      //Concatenate predicates
       if(out_pred == null){
         out_pred = pred;
       }else{
@@ -219,17 +224,4 @@ public class InPredicate extends Predicate {
     return out_pred;
   }
 
-  @Override
-  public Expr toAutoPartitionPruning(SlotRef part_column) throws AnalysisException {
-    ArrayList<Expr> inList = new ArrayList<Expr>();
-
-    @SuppressWarnings("unchecked")
-    ArrayList<Expr> actualInList = (ArrayList<Expr>) getChildren().clone();
-    actualInList.remove(0);
-
-    for (Expr expr : actualInList)
-      inList.add(part_column.getPartitionFunction(expr));
-
-    return new InPredicate(part_column, inList, false);
-  }
 }

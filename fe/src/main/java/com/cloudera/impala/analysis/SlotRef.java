@@ -14,19 +14,11 @@
 
 package com.cloudera.impala.analysis;
 
-import java.math.BigDecimal;
-import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import com.cloudera.impala.analysis.ArithmeticExpr.Operator;
-import com.cloudera.impala.catalog.HdfsTable;
 import com.cloudera.impala.catalog.Type;
-import com.cloudera.impala.catalog.VirtualColumn;
 import com.cloudera.impala.common.AnalysisException;
-import com.cloudera.impala.common.Pair;
-import com.cloudera.impala.planner.AutoPartitionPruning;
 import com.cloudera.impala.thrift.TExprNode;
 import com.cloudera.impala.thrift.TExprNodeType;
 import com.cloudera.impala.thrift.TSlotRef;
@@ -226,123 +218,6 @@ public class SlotRef extends Expr {
 
   public TableName getTableName() {
     return tblName_;
-  }
-
-  /**
-   * Get columns for automatic partition pruning which correspond
-   * to this one
-   *
-   * @param analyzer Analyzer
-   * @param tbl_ Table
-   * @return Columns for automatic partition pruning
-   * @throws AnalysisException
-   */
-  public LinkedList<SlotRef> getColumnsForAutomaticPartitioning(
-      Analyzer analyzer, HdfsTable tbl_, Pair<Expr, Expr> between_bounds) throws AnalysisException {
-
-    LinkedList<SlotRef> slots_part = new LinkedList<SlotRef>();
-
-    // Check if is a partitioning column
-    if (getDesc().getColumn().getPosition() < tbl_
-        .getNumClusteringCols())
-      throw new IllegalStateException("Can not be applied because "
-          + "the column (" + getColumnName()
-          + ") is already a partitioning column.");
-
-    boolean part_by_time = false;
-    for (VirtualColumn column : getDesc().getColumn().getAplicableColumns()) {
-      String column_name = column.getName();
-
-      SlotRef part_slotRef = new SlotRef(getTableName(), column_name);
-      part_slotRef.analyze(analyzer.getAnalzer(getSlotId()));
-      analyzer.createIdentityEquivClasses();
-      slots_part.add(part_slotRef);
-
-      if(column_name.endsWith(AutoPartitionPruning.PARTITIONING_SUBSTRING + "year")
-            || column_name.endsWith(AutoPartitionPruning.PARTITIONING_SUBSTRING + "month")
-            || column_name.endsWith(AutoPartitionPruning.PARTITIONING_SUBSTRING + "day")
-            || column_name.endsWith(AutoPartitionPruning.PARTITIONING_SUBSTRING + "hour")){
-        part_by_time = true;
-      }
-    }
-
-    if (slots_part.size() < 1)
-      throw new IllegalStateException("Can not be applied because "
-          + "the column (" + getColumnName()
-          + ") doesn't have any column for partitioning.");
-
-    //take care with partitioning by time and several columns
-    if(slots_part.size() > 1){
-      if(part_by_time){
-
-        slots_part = AutoPartitionPruning.getPartitioningColumnsForTime(slots_part, between_bounds);
-      }else{
-        throw new IllegalStateException("several partitioning columns are not compatible"
-            + " unless these functions were year, month, day or hour.");
-      }
-    }
-
-    return slots_part;
-  }
-
-  public FunctionCallExpr getPartitionFunction(Expr binding) throws AnalysisException {
-    int index_part = col_.lastIndexOf(AutoPartitionPruning.PARTITIONING_SUBSTRING)
-              + AutoPartitionPruning.PARTITIONING_SUBSTRING.length();
-    int index_end_func = col_.indexOf('_', index_part);
-
-    String function_name = col_.substring(
-        index_part,
-        index_end_func > index_part ? index_end_func : col_.length() );
-
-    AutoPartitionPruning.checkFunctionCompatibility(function_name);
-
-    List<Expr> params = new LinkedList<Expr>();
-    params.add(binding);
-
-    if (function_name.equals("mod")) {
-      int module = Integer.valueOf(col_.substring(
-          col_.lastIndexOf("_") + 1, col_.length()));
-
-      params.add(new NumericLiteral(new BigDecimal(module)));
-
-      function_name = "pmod";
-    }else if(function_name.equals("div")){
-      int divisor = Integer.valueOf(col_.substring(
-          col_.lastIndexOf("_") + 1, col_.length()));
-
-      ArithmeticExpr arit = new ArithmeticExpr(Operator.DIVIDE, binding, new NumericLiteral(new BigDecimal(divisor)));
-      params.remove(binding);
-      params.add(arit);
-
-      function_name = "floor";
-    }else if(function_name.equals("nummonths")){
-      FunctionCallExpr year = new FunctionCallExpr("year", Arrays.asList(binding));
-      FunctionCallExpr month = new FunctionCallExpr("month", Arrays.asList(binding));
-
-      ArithmeticExpr arit = new ArithmeticExpr(Operator.ADD,
-          new ArithmeticExpr(Operator.MULTIPLY, year, new NumericLiteral(new BigDecimal(12))),
-          month);
-
-      params.remove(binding);
-      params.add(arit);
-
-      function_name = "floor";
-    }else if(function_name.equals("numdays")){
-      FunctionCallExpr year = new FunctionCallExpr("year", Arrays.asList(binding));
-      FunctionCallExpr day_of_year = new FunctionCallExpr("dayofyear", Arrays.asList(binding));
-
-      ArithmeticExpr arit = new ArithmeticExpr(Operator.ADD,
-          new ArithmeticExpr(Operator.MULTIPLY, year, new NumericLiteral(new BigDecimal(365))),
-          day_of_year);
-
-      params.remove(binding);
-      params.add(arit);
-
-      function_name = "floor";
-    }
-    //year('2012-08-17 05:14:43') * 12 + month('2012-08-17 05:14:43')
-
-    return new FunctionCallExpr(function_name, params);
   }
 
 }

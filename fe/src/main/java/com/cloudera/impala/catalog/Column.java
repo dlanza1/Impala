@@ -20,6 +20,10 @@ import org.apache.hadoop.hive.metastore.api.ColumnStatisticsData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.cloudera.impala.analysis.Expr;
+import com.cloudera.impala.common.AnalysisException;
+import com.cloudera.impala.common.Pair;
+import com.cloudera.impala.planner.AutoPartitionPruningHelper;
 import com.cloudera.impala.thrift.TColumn;
 import com.cloudera.impala.thrift.TColumnStats;
 import com.google.common.base.Objects;
@@ -146,7 +150,26 @@ public class Column {
     aplicable_columns.add(virtual_col);
   }
 
-  public LinkedList<VirtualColumn> getAplicableColumns(){
+  public LinkedList<VirtualColumn> getAplicableColumns(Pair<Expr, Expr> between_bounds) throws AnalysisException{
+    if(aplicable_columns == null)
+      return null;
+
+    boolean part_by_time = false;
+    for (VirtualColumn virtual_column : aplicable_columns) {
+      String virtual_column_name = virtual_column.getName();
+
+      if(virtual_column_name.endsWith(VirtualColumn.SUBSTRING + "year")
+            || virtual_column_name.endsWith(VirtualColumn.SUBSTRING + "month")
+            || virtual_column_name.endsWith(VirtualColumn.SUBSTRING + "day")
+            || virtual_column_name.endsWith(VirtualColumn.SUBSTRING + "hour")){
+        part_by_time = true;
+      }
+    }
+
+    //take care with partitioning by time and several columns
+    if(aplicable_columns.size() > 1 && part_by_time)
+      return AutoPartitionPruningHelper.getPartitioningColumnsForTime(aplicable_columns, between_bounds);
+
     return aplicable_columns;
   }
 }

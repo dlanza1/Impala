@@ -9,6 +9,7 @@ import java.util.Set;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.junit.Test;
 
+import com.cloudera.impala.common.AnalysisException;
 import com.cloudera.impala.thrift.TCatalogObjectType;
 import com.cloudera.impala.thrift.TTableDescriptor;
 
@@ -62,7 +63,11 @@ public class TableTest {
 
     assertTrue(col1.canBeAppliedAutomaticPartitionPrunning());
     assertEquals(col1, ((VirtualColumn) col4).getColumnInWhichApplies());
-    assertEquals(col1.getAplicableColumns().getFirst(), col4);
+    try {
+      assertEquals(col1.getAplicableColumns(null).getFirst(), col4);
+    } catch (AnalysisException e) {
+      e.printStackTrace();
+    }
     assertFalse(col2.canBeAppliedAutomaticPartitionPrunning());
     assertFalse(col3.canBeAppliedAutomaticPartitionPrunning());
     assertFalse(col4.canBeAppliedAutomaticPartitionPrunning());

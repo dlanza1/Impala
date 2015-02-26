@@ -24,12 +24,10 @@ import java.util.Set;
 import com.cloudera.impala.catalog.Catalog;
 import com.cloudera.impala.catalog.Function;
 import com.cloudera.impala.catalog.Function.CompareMode;
-import com.cloudera.impala.catalog.HdfsTable;
 import com.cloudera.impala.catalog.PrimitiveType;
 import com.cloudera.impala.catalog.ScalarType;
 import com.cloudera.impala.catalog.Type;
 import com.cloudera.impala.common.AnalysisException;
-import com.cloudera.impala.common.Pair;
 import com.cloudera.impala.common.TreeNode;
 import com.cloudera.impala.thrift.TExpr;
 import com.cloudera.impala.thrift.TExprNode;
@@ -1127,21 +1125,11 @@ abstract public class Expr extends TreeNode<Expr> implements ParseNode, Cloneabl
    * Apply auto partition pruning
    *
    * @param between_id If the parent is a between predicate
-   * @return Expr ready ready for create the filter
-   * @throws AnalysisException
-   */
-  public Expr applyAutoPartitionPruning(Analyzer analyzer, HdfsTable tbl_, Pair<Expr, Expr> between_bounds) throws AnalysisException {
-    throw new IllegalStateException("the " + getClass().getSimpleName() + " is not compatible.");
-  }
-
-  /**
-   * Convert expression to use auto partition pruning
-   *
-   * @param part_column Partition column
    * @return Expr ready for create the filter
    * @throws AnalysisException
    */
-  public Expr toAutoPartitionPruning(SlotRef part_column) throws AnalysisException {
-    return null;
+  public Expr applyVirtualColumns(Analyzer analyzer) throws AnalysisException {
+    throw new IllegalStateException("the " + getClass().getSimpleName() + " is not compatible.");
   }
+
 }

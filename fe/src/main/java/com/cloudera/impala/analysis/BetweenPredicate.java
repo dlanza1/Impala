@@ -17,9 +17,7 @@ package com.cloudera.impala.analysis;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.cloudera.impala.catalog.HdfsTable;
 import com.cloudera.impala.common.AnalysisException;
-import com.cloudera.impala.common.Pair;
 import com.cloudera.impala.thrift.TExprNode;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -84,18 +82,18 @@ public class BetweenPredicate extends Predicate {
     // Rewrite between predicate into a conjunctive/disjunctive compound predicate.
     if (isNotBetween_) {
       // Rewrite into disjunction.
-      Predicate lower = new BinaryPredicate(BinaryPredicate.Operator.LT,
-          originalChildren_.get(0), originalChildren_.get(1));
-      Predicate upper = new BinaryPredicate(BinaryPredicate.Operator.GT,
-          originalChildren_.get(0), originalChildren_.get(2));
+      BinaryPredicate lower = new BinaryPredicate(BinaryPredicate.Operator.LT,
+          originalChildren_.get(0), originalChildren_.get(1), originalChildren_.get(2));
+      BinaryPredicate upper = new BinaryPredicate(BinaryPredicate.Operator.GT,
+          originalChildren_.get(0), originalChildren_.get(2), originalChildren_.get(1));
       rewrittenPredicate_ =
           new CompoundPredicate(CompoundPredicate.Operator.OR, lower, upper);
     } else {
       // Rewrite into conjunction.
-      Predicate lower = new BinaryPredicate(BinaryPredicate.Operator.GE,
-          originalChildren_.get(0), originalChildren_.get(1));
-      Predicate upper = new BinaryPredicate(BinaryPredicate.Operator.LE,
-          originalChildren_.get(0), originalChildren_.get(2));
+      BinaryPredicate lower = new BinaryPredicate(BinaryPredicate.Operator.GE,
+          originalChildren_.get(0), originalChildren_.get(1), originalChildren_.get(2));
+      BinaryPredicate upper = new BinaryPredicate(BinaryPredicate.Operator.LE,
+          originalChildren_.get(0), originalChildren_.get(2), originalChildren_.get(1));
       rewrittenPredicate_ =
           new CompoundPredicate(CompoundPredicate.Operator.AND, lower, upper);
     }
@@ -154,16 +152,7 @@ public class BetweenPredicate extends Predicate {
   }
 
   @Override
-  public Expr applyAutoPartitionPruning(Analyzer analyzer, HdfsTable tbl_,
-      Pair<Expr, Expr> between_bounds) throws AnalysisException {
-    CompoundPredicate comp_pred = getRewrittenPredicate();
-    BinaryPredicate child0 = ((BinaryPredicate) comp_pred.getChild(0));
-    BinaryPredicate child1 = ((BinaryPredicate) comp_pred.getChild(1));
-
-    Pair<Expr, Expr> bounds =  new Pair<Expr, Expr>(
-        child0.getSlotBinding(child0.getBoundSlot().getSlotId()),
-        child1.getSlotBinding(child1.getBoundSlot().getSlotId()));
-
-    return comp_pred.applyAutoPartitionPruning(analyzer, tbl_, bounds);
+  public Expr applyVirtualColumns(Analyzer analyzer) throws AnalysisException {
+    return getRewrittenPredicate();
   }
 }

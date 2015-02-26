@@ -472,8 +472,8 @@ public class HdfsScanNode extends ScanNode {
       if (slotDesc.getColumn().getPosition() < tbl_.getNumClusteringCols()) {
         partitionSlots.add(slotDesc.getId());
       }else if (slotDesc.getColumn().canBeAppliedAutomaticPartitionPrunning()) {
-//        partitionSlots.add(slotDesc.getId());
-        LOG.debug("AutoPartitionPruning: susceptible column " + slotDesc.getColumn().getName());
+        partitionSlots.add(slotDesc.getId());
+        LOG.debug(slotDesc.getColumn().getName() + " column can be applied auto partition pruning");
       }
     }
 
@@ -489,30 +489,34 @@ public class HdfsScanNode extends ScanNode {
     Iterator<Expr> it = conjuncts_.iterator();
     while (it.hasNext()) {
       Expr conjunct = it.next();
+
       if (conjunct.isBoundBySlotIds(partitionSlots)) {
+        try {
+          conjunct = conjunct.applyVirtualColumns(analyzer);
+
+          LOG.debug("virtual columns applied (" + conjunct.toSql() + ")");
+        } catch (IllegalStateException e) {
+          LOG.debug("virtual columns could not be applied to: (" + conjunct.toSql() + ") "
+              + "because " + e.getMessage());
+          e.printStackTrace();
+          continue;
+        } catch (Exception e) {
+          LOG.debug("virtual columns could not be applied to: (" + conjunct.toSql() + ") "
+              + "because " + e.getMessage());
+          e.printStackTrace();
+          continue;
+        }
+
         if (canEvalUsingPartitionMd(conjunct)) {
           simpleFilterConjuncts.add(Expr.pushNegationToOperands(conjunct));
         } else {
           partitionFilters.add(new HdfsPartitionFilter(conjunct, tbl_, analyzer));
         }
-        it.remove();
+      }else{
+        LOG.debug("conjunct: " + conjunct.toSql() + " is not fully bound by partition columns.");
       }
-    }
 
-    //Try to apply automatic partitioning
-    try {
-      new AutoPartitionPruning(analyzer, tbl_).applyFilters(
-          conjuncts_, tupleIds_, simpleFilterConjuncts, partitionFilters);
-    } catch (IllegalStateException e){
-      LOG.debug("there was an error (" + e.getMessage() + ") trying to apply automatic partitioning, "
-          + "so it was not applied.");
-
-      e.printStackTrace();
-    } catch (Exception e) {
-      LOG.debug("there was an error (" + e.getMessage() + ") trying to apply automatic partitioning, "
-          + "so it was not applied.");
-
-      e.printStackTrace();
+      it.remove();
     }
 
     // Set of matching partition ids, i.e. partitions that pass all filters

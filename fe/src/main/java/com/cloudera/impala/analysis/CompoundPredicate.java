@@ -19,7 +19,6 @@ import java.util.List;
 
 import com.cloudera.impala.catalog.Db;
 import com.cloudera.impala.catalog.Function.CompareMode;
-import com.cloudera.impala.catalog.HdfsTable;
 import com.cloudera.impala.catalog.ScalarFunction;
 import com.cloudera.impala.catalog.Type;
 import com.cloudera.impala.common.AnalysisException;
@@ -213,16 +212,10 @@ public class CompoundPredicate extends Predicate {
   }
 
   @Override
-  public Expr applyAutoPartitionPruning(Analyzer analyzer, HdfsTable tbl_,
-      Pair<Expr, Expr> between_bounds) throws AnalysisException {
-
-    if (between_bounds == null) {
-      between_bounds = treatLikeBetween();
-    }
-
+  public Expr applyVirtualColumns(Analyzer analyzer) throws AnalysisException {
     return new CompoundPredicate(getOp(),
-        getChild(0).applyAutoPartitionPruning(analyzer, tbl_, between_bounds),
-        getChild(1).applyAutoPartitionPruning(analyzer, tbl_, between_bounds));
+        getChild(0).applyVirtualColumns(analyzer),
+        getChild(1).applyVirtualColumns(analyzer));
   }
 
   /**
@@ -234,7 +227,7 @@ public class CompoundPredicate extends Predicate {
    */
   public Pair<Expr, Expr> treatLikeBetween() {
 
-    if(getOp() != com.cloudera.impala.analysis.CompoundPredicate.Operator.AND)
+    if(getOp() != CompoundPredicate.Operator.AND)
       return null;
 
     Expr child_0 = getChild(0);

@@ -27,7 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 public class ArithmeticExpr extends Expr {
-  enum Operator {
+  public enum Operator {
     MULTIPLY("*", "multiply"),
     DIVIDE("/", "divide"),
     MOD("%", "mod"),
