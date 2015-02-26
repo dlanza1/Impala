@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.cloudera.impala.catalog.Column;
+import com.cloudera.impala.catalog.VirtualColumn;
 import com.cloudera.impala.common.AnalysisException;
 import com.cloudera.impala.common.ColumnAliasGenerator;
 import com.cloudera.impala.common.TableAliasGenerator;
@@ -382,10 +383,12 @@ public class SelectStmt extends QueryStmt {
       throws AnalysisException {
     Preconditions.checkState(!analyzer.isSemiJoined(desc.getId()));
     for (Column col: desc.getTable().getColumnsInHiveOrder()) {
-      SlotRef slotRef = new SlotRef(tblName, col.getName());
-      slotRef.analyze(analyzer);
-      resultExprs_.add(slotRef);
-      colLabels_.add(col.getName().toLowerCase());
+      if(!(col instanceof VirtualColumn)){
+        SlotRef slotRef = new SlotRef(tblName, col.getName());
+        slotRef.analyze(analyzer);
+        resultExprs_.add(slotRef);
+        colLabels_.add(col.getName().toLowerCase());
+      }
     }
   }
 

@@ -83,6 +83,11 @@ public abstract class Table implements CatalogObject {
   // The lastDdlTime for this table; -1 if not set
   protected long lastDdlTime_;
 
+  /**
+   * Indicate if the virtual columns have been already computed
+   */
+  private boolean computedVirtualColumns;
+
   // Set of supported table types.
   protected static EnumSet<TableType> SUPPORTED_TABLE_TYPES = EnumSet.of(
       TableType.EXTERNAL_TABLE, TableType.MANAGED_TABLE, TableType.VIRTUAL_VIEW);
@@ -97,6 +102,7 @@ public abstract class Table implements CatalogObject {
     colsByPos_ = Lists.newArrayList();
     colsByName_ = Maps.newHashMap();
     virtualColumns_ = Lists.newLinkedList();
+    computedVirtualColumns = false;
     lastDdlTime_ = (msTable_ != null) ?
         CatalogServiceCatalog.getLastDdlTime(msTable_) : -1;
   }
@@ -117,6 +123,8 @@ public abstract class Table implements CatalogObject {
     colsByPos_.add(col);
     colsByName_.put(col.getName().toLowerCase(), col);
 
+    computedVirtualColumns = false;
+
     if(col instanceof VirtualColumn)
       virtualColumns_.add((VirtualColumn) col);
   }
@@ -124,7 +132,8 @@ public abstract class Table implements CatalogObject {
   public void clearColumns() {
     colsByPos_.clear();
     colsByName_.clear();
-    virtualColumns_.clear();;
+    virtualColumns_.clear();
+    computedVirtualColumns = false;
   }
 
   /**
@@ -240,6 +249,7 @@ public abstract class Table implements CatalogObject {
     colsByPos_.clear();
     colsByPos_.ensureCapacity(columns.size());
     virtualColumns_.clear();
+    computedVirtualColumns = false;
     for (int i = 0; i < columns.size(); ++i) {
       Column col = Column.fromThrift(columns.get(i));
       colsByPos_.add(col.getPosition(), col);
@@ -250,8 +260,6 @@ public abstract class Table implements CatalogObject {
       if(col instanceof VirtualColumn)
         virtualColumns_.add((VirtualColumn) col);
     }
-
-    computeVirtualColumns();
 
     // Estimated number of rows
     numRows_ = thriftTable.isSetTable_stats() ?
@@ -276,15 +284,23 @@ public abstract class Table implements CatalogObject {
   }
 
   public void computeVirtualColumns(){
+
+    LOG.debug("compute virtual columns for " + name_);
+
+    //Avoid compute several times
+    if(computedVirtualColumns)
+      return;
+    computedVirtualColumns = true;
+
     try {
-      LOG.debug("----"+virtualColumns_.size());
       for(VirtualColumn virtual_col:virtualColumns_){
         Column normal_col = colsByName_.get(virtual_col.getColumnNameInWhichApplies());
         virtual_col.setColumnToBeApplied(normal_col);
       }
-    } catch (TableLoadingException e) {
-      LOG.debug("could not be applied because there was an error computing the "
-          + "virtual columns for this table (" + name_ + ")");
+    } catch (Exception e) {
+      LOG.debug("there was an error computing the "
+          + "virtual columns for " + name_
+          + " (auto partition prunning is not going to be applied properly)");
       e.printStackTrace();
     }
   }
