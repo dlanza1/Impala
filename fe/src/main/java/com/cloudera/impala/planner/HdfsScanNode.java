@@ -473,7 +473,8 @@ public class HdfsScanNode extends ScanNode {
         partitionSlots.add(slotDesc.getId());
       }else if (slotDesc.getColumn().canBeAppliedAutomaticPartitionPrunning()) {
         partitionSlots.add(slotDesc.getId());
-        LOG.debug(slotDesc.getColumn().getName() + " column can be applied auto partition pruning");
+        LOG.debug(slotDesc.getColumn().getName() + " column can be applied automatic "
+            + "partition pruning by " + slotDesc.getColumn().getAplicableColumns());
       }
     }
 
@@ -492,7 +493,7 @@ public class HdfsScanNode extends ScanNode {
 
       if (conjunct.isBoundBySlotIds(partitionSlots)) {
         try {
-          conjunct = conjunct.applyVirtualColumns(analyzer);
+          conjunct = conjunct.applyVirtualColumns(analyzer, tbl_.getNumClusteringCols());
 
           LOG.debug("virtual columns applied (" + conjunct.toSql() + ")");
         } catch (IllegalStateException e) {

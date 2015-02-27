@@ -191,9 +191,12 @@ public class InPredicate extends Predicate {
   public Expr clone() { return new InPredicate(this); }
 
   @Override
-  public Expr applyVirtualColumns(Analyzer analyzer) throws AnalysisException {
+  public Expr applyVirtualColumns(Analyzer analyzer, int numClusteringColumns) throws AnalysisException {
     SlotRef bound_slot = getBoundSlot();
     if (bound_slot == null)
+      return this;
+
+    if(bound_slot.getDesc().getColumn().getPosition() < numClusteringColumns)
       return this;
 
     LinkedList<VirtualColumn> virtual_columns = bound_slot.getDesc()

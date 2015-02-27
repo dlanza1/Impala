@@ -16,7 +16,7 @@ import com.cloudera.impala.thrift.TTableDescriptor;
 public class TableTest {
 
   @Test
-  public void virtualFeatures(){
+  public void virtualFeatures() {
     Table tab = new Table(null, null, null, "table_name", null) {
 
       @Override
@@ -51,7 +51,7 @@ public class TableTest {
     tab.addColumn(col1);
     Column col3 = Column.create("col_1", Type.NULL, null, 3);
     tab.addColumn(col1);
-    Column col4 = Column.create("col_1_part_month", Type.NULL, null, 4);
+    Column col4 = Column.create("col_1_part_mod_500", Type.NULL, null, 4);
     tab.addColumn(col4);
 
     assertFalse(col1.canBeAppliedAutomaticPartitionPrunning());

@@ -72,7 +72,12 @@ public class Column {
         && (index_part_subs + VirtualColumn.SUBSTRING.length()) < name.length();
 
     if(virtual){
-      return new VirtualColumn(name, type, comment, pos);
+      try {
+        return new VirtualColumn(name, type, comment, pos);
+      } catch (AnalysisException e) {
+        e.printStackTrace();
+        return new Column(name, type, comment, pos);
+      }
     }else{
       return new Column(name, type, comment, pos);
     }
@@ -153,7 +158,11 @@ public class Column {
   }
 
   public LinkedList<VirtualColumn> getAplicableColumns(Pair<Expr, Expr> between_bounds) throws AnalysisException{
-    if(aplicable_columns == null || aplicable_columns.size() == 1 || useMonotonicFunctions())
+
+    if(aplicable_columns == null)
+      throw new AnalysisException("there is no aplicable columns for " + name_);
+
+    if(aplicable_columns.size() == 1 || useMonotonicFunctions())
       return aplicable_columns;
 
     LinkedList<VirtualColumn> valid_part_columns = new LinkedList<VirtualColumn>();
@@ -251,6 +260,10 @@ public class Column {
     }
 
     return true;
+  }
+
+  public LinkedList<VirtualColumn> getAplicableColumns() {
+    return aplicable_columns;
   }
 
 }

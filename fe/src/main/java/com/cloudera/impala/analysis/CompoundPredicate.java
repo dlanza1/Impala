@@ -212,10 +212,10 @@ public class CompoundPredicate extends Predicate {
   }
 
   @Override
-  public Expr applyVirtualColumns(Analyzer analyzer) throws AnalysisException {
+  public Expr applyVirtualColumns(Analyzer analyzer, int numClusteringColumns) throws AnalysisException {
     return new CompoundPredicate(getOp(),
-        getChild(0).applyVirtualColumns(analyzer),
-        getChild(1).applyVirtualColumns(analyzer));
+        getChild(0).applyVirtualColumns(analyzer, numClusteringColumns),
+        getChild(1).applyVirtualColumns(analyzer, numClusteringColumns));
   }
 
   /**

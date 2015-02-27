@@ -520,8 +520,9 @@ public class HdfsTable extends Table {
    * Create columns corresponding to fieldSchemas, including column statistics.
    * Throws a TableLoadingException if the metadata is incompatible with what we
    * support.
+   * @param numClusteringCols_
    */
-  private void loadColumns(List<FieldSchema> fieldSchemas, HiveMetaStoreClient client)
+  private void loadColumns(List<FieldSchema> fieldSchemas, HiveMetaStoreClient client, int numClusteringCols_)
       throws TableLoadingException {
     int pos = 0;
     for (FieldSchema s: fieldSchemas) {
@@ -535,6 +536,7 @@ public class HdfsTable extends Table {
       }
 
       Column col = Column.create(s.getName(), type, s.getComment(), pos);
+
       addColumn(col);
       ++pos;
 
@@ -1039,7 +1041,7 @@ public class HdfsTable extends Table {
       fieldSchemas.addAll(tblFields);
       // The number of clustering columns is the number of partition keys.
       numClusteringCols_ = partKeys.size();
-      loadColumns(fieldSchemas, client);
+      loadColumns(fieldSchemas, client, numClusteringCols_);
 
       // Collect the list of partitions to use for the table. Partitions may be reused
       // from the existing cached table entry (if one exists), read from the metastore,

@@ -312,7 +312,7 @@ public class BinaryPredicate extends Predicate {
   public Expr clone() { return new BinaryPredicate(this); }
 
   @Override
-  public Expr applyVirtualColumns(Analyzer analyzer) throws AnalysisException {
+  public Expr applyVirtualColumns(Analyzer analyzer, int numClusteringColumns) throws AnalysisException {
 
     SlotRef bound_slot = getBoundSlot();
     if (bound_slot == null)
@@ -323,8 +323,12 @@ public class BinaryPredicate extends Predicate {
       between_bounds = new Pair<Expr, Expr>(children_.get(1), between_bound_);
     }
 
+    if(bound_slot.getDesc().getColumn().getPosition() < numClusteringColumns)
+      return this;
+
     LinkedList<VirtualColumn> virtual_columns = bound_slot.getDesc()
                                 .getColumn().getAplicableColumns(between_bounds);
+
     Expr out_pred = null;
     for (VirtualColumn virtualColumn : virtual_columns) {
       FunctionCallExpr func = virtualColumn.getFunction(

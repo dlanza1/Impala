@@ -152,7 +152,7 @@ public class BetweenPredicate extends Predicate {
   }
 
   @Override
-  public Expr applyVirtualColumns(Analyzer analyzer) throws AnalysisException {
+  public Expr applyVirtualColumns(Analyzer analyzer, int numClusteringColumns) throws AnalysisException {
     return getRewrittenPredicate();
   }
 }

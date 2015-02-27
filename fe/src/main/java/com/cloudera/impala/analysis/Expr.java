@@ -1123,12 +1123,13 @@ abstract public class Expr extends TreeNode<Expr> implements ParseNode, Cloneabl
 
   /**
    * Apply auto partition pruning
+   * @param numClusteringColumns
    *
    * @param between_id If the parent is a between predicate
    * @return Expr ready for create the filter
    * @throws AnalysisException
    */
-  public Expr applyVirtualColumns(Analyzer analyzer) throws AnalysisException {
+  public Expr applyVirtualColumns(Analyzer analyzer, int numClusteringColumns) throws AnalysisException {
     throw new IllegalStateException("the " + getClass().getSimpleName() + " is not compatible.");
   }
 
