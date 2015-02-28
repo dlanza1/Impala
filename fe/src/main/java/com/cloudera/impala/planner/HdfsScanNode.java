@@ -462,8 +462,6 @@ public class HdfsScanNode extends ScanNode {
   private void prunePartitions(Analyzer analyzer) throws InternalException {
     DescriptorTable descTbl = analyzer.getDescTbl();
 
-    tbl_.computeVirtualColumns();
-
     // loop through all partitions and prune based on applicable conjuncts;
     // start with creating a collection of partition filters for the applicable conjuncts
     List<SlotId> partitionSlots = Lists.newArrayList();
@@ -516,8 +514,6 @@ public class HdfsScanNode extends ScanNode {
       }else{
         LOG.debug("conjunct: " + conjunct.toSql() + " is not fully bound by partition columns.");
       }
-
-      it.remove();
     }
 
     // Set of matching partition ids, i.e. partitions that pass all filters

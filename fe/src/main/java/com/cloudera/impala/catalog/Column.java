@@ -51,11 +51,11 @@ public class Column {
    */
   protected LinkedList<VirtualColumn> aplicable_columns;
 
-  protected Column(String name, Type type, int position) {
+  public Column(String name, Type type, int position) {
     this(name, type, null, position);
   }
 
-  protected Column(String name, Type type, String comment, int position) {
+  public Column(String name, Type type, String comment, int position) {
     name_ = name;
     type_ = type;
     comment_ = comment;

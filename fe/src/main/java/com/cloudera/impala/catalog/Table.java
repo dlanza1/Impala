@@ -16,7 +16,6 @@ package com.cloudera.impala.catalog;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -71,8 +70,6 @@ public abstract class Table implements CatalogObject {
   // estimated number of rows in table; -1: unknown.
   protected long numRows_ = -1;
 
-  private final LinkedList<VirtualColumn> virtualColumns_;
-
   // colsByPos[i] refers to the ith column in the table. The first numClusteringCols are
   // the clustering columns.
   private final ArrayList<Column> colsByPos_;
@@ -96,7 +93,6 @@ public abstract class Table implements CatalogObject {
     owner_ = owner;
     colsByPos_ = Lists.newArrayList();
     colsByName_ = Maps.newHashMap();
-    virtualColumns_ = Lists.newLinkedList();
     lastDdlTime_ = (msTable_ != null) ?
         CatalogServiceCatalog.getLastDdlTime(msTable_) : -1;
   }
@@ -116,15 +112,11 @@ public abstract class Table implements CatalogObject {
   public void addColumn(Column col) {
     colsByPos_.add(col);
     colsByName_.put(col.getName().toLowerCase(), col);
-
-    if(col instanceof VirtualColumn)
-      virtualColumns_.add((VirtualColumn) col);
   }
 
   public void clearColumns() {
     colsByPos_.clear();
     colsByName_.clear();
-    virtualColumns_.clear();
   }
 
   /**
@@ -239,19 +231,13 @@ public abstract class Table implements CatalogObject {
     fields_ = new ArrayList<FieldSchema>();
     colsByPos_.clear();
     colsByPos_.ensureCapacity(columns.size());
-    virtualColumns_.clear();
     for (int i = 0; i < columns.size(); ++i) {
       Column col = Column.fromThrift(columns.get(i));
       colsByPos_.add(col.getPosition(), col);
       colsByName_.put(col.getName().toLowerCase(), col);
       fields_.add(new FieldSchema(col.getName(),
         col.getType().toString().toLowerCase(), col.getComment()));
-
-      if(col instanceof VirtualColumn)
-        virtualColumns_.add((VirtualColumn) col);
     }
-
-    computeVirtualColumns();
 
     // Estimated number of rows
     numRows_ = thriftTable.isSetTable_stats() ?
@@ -272,22 +258,6 @@ public abstract class Table implements CatalogObject {
         throw new TableLoadingException(
             "Expected lower case column name but found: " + colName);
       }
-    }
-  }
-
-  public void computeVirtualColumns(){
-    try {
-      for(VirtualColumn virtual_col:virtualColumns_){
-        Column normal_col = colsByName_.get(virtual_col.getColumnNameInWhichApplies());
-        virtual_col.setColumnToBeApplied(normal_col);
-      }
-
-      LOG.debug("computed " + virtualColumns_.size() + " virtual columns for " + name_);
-    } catch (Exception e) {
-      LOG.debug("there was an error computing the "
-          + "virtual columns for " + name_
-          + " (auto partition prunning is not going to be applied properly)");
-      e.printStackTrace();
     }
   }
 

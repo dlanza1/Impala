@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -535,7 +536,12 @@ public class HdfsTable extends Table {
                 getName(), type.toString(), s.getName()));
       }
 
-      Column col = Column.create(s.getName(), type, s.getComment(), pos);
+      Column col = null;
+      if(pos < numClusteringCols_){
+        col = Column.create(s.getName(), type, s.getComment(), pos);
+      }else{
+        col = new Column(s.getName(), type, s.getComment(), pos);
+      }
 
       addColumn(col);
       ++pos;
@@ -543,6 +549,8 @@ public class HdfsTable extends Table {
       // Load and set column stats in col.
       loadColumnStats(col, client);
     }
+
+    computeVirtualColumns();
   }
 
   /**
@@ -1201,6 +1209,9 @@ public class HdfsTable extends Table {
   @Override
   protected void loadFromThrift(TTable thriftTable) throws TableLoadingException {
     super.loadFromThrift(thriftTable);
+
+    computeVirtualColumns();
+
     THdfsTable hdfsTable = thriftTable.getHdfs_table();
     hdfsBaseDir_ = hdfsTable.getHdfsBaseDir();
     nullColumnValue_ = hdfsTable.nullColumnValue;
@@ -1222,6 +1233,26 @@ public class HdfsTable extends Table {
     isMarkedCached_ = HdfsCachingUtil.getCacheDirIdFromParams(
         getMetaStoreTable().getParameters()) != null;
     populatePartitionMd();
+  }
+
+  public void computeVirtualColumns(){
+    try {
+      int pos = 0;
+      for (Iterator<Column> it = getColumns().iterator(); it.hasNext()
+          && pos < numClusteringCols_;pos++) {
+        Column col = it.next();
+
+        if(col instanceof VirtualColumn){
+          VirtualColumn vc = (VirtualColumn) col;
+          vc.setColumnToBeApplied(getColumn(vc.getColumnNameInWhichApplies()));
+        }
+      }
+    } catch (Exception e) {
+      LOG.debug("there was an error computing the "
+          + "virtual columns for " + name_
+          + " (auto partition prunning is not going to be applied properly)");
+      e.printStackTrace();
+    }
   }
 
   @Override
