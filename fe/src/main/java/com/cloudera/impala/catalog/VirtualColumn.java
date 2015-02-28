@@ -24,12 +24,12 @@ public class VirtualColumn extends Column {
   final FUNCTION function;
 
   enum FUNCTION {
-//    YEAR {
-//      @Override
-//      void setFunctionName() {
-//        function_name = "year";
-//      }
-//    },
+    YEAR {
+      @Override
+      void setFunctionName() {
+        function_name = "year";
+      }
+    },
     MONTH {
       @Override
       void setFunctionName() {
