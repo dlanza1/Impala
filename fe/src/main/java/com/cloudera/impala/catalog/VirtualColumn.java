@@ -21,13 +21,16 @@ import com.cloudera.impala.common.Pair;
  */
 public class VirtualColumn extends Column {
 
-  final FUNCTION function;
-
-  enum FUNCTION {
+  enum Function {
     YEAR {
       @Override
       void setFunctionName() {
         function_name = "year";
+      }
+
+      @Override
+      boolean isMonotonic() {
+        return false;
       }
     },
     MONTH {
@@ -35,11 +38,21 @@ public class VirtualColumn extends Column {
       void setFunctionName() {
         function_name = "month";
       }
+
+      @Override
+      boolean isMonotonic() {
+        return false;
+      }
     },
     DAY {
       @Override
       void setFunctionName() {
         function_name = "day";
+      }
+
+      @Override
+      boolean isMonotonic() {
+        return false;
       }
     },
     HOUR {
@@ -47,11 +60,21 @@ public class VirtualColumn extends Column {
       void setFunctionName() {
         function_name = "hour";
       }
+
+      @Override
+      boolean isMonotonic() {
+        return false;
+      }
     },
     NUMMONTHS {
       @Override
       void setFunctionName() {
         function_name = "floor";
+      }
+
+      @Override
+      boolean isMonotonic() {
+        return true;
       }
 
       @Override
@@ -75,6 +98,11 @@ public class VirtualColumn extends Column {
       }
 
       @Override
+      boolean isMonotonic() {
+        return false;
+      }
+
+      @Override
       public FunctionCallExpr get(Expr binding) {
         FunctionCallExpr year = new FunctionCallExpr("year", Arrays.asList(binding));
         FunctionCallExpr day_of_year = new FunctionCallExpr("dayofyear", Arrays.asList(binding));
@@ -91,6 +119,11 @@ public class VirtualColumn extends Column {
       @Override
       void setFunctionName() {
         function_name = "pmod";
+      }
+
+      @Override
+      boolean isMonotonic() {
+        return false;
       }
 
       @Override
@@ -132,6 +165,11 @@ public class VirtualColumn extends Column {
       }
 
       @Override
+      boolean isMonotonic() {
+        return true;
+      }
+
+      @Override
       void computeArguments(String args_s) throws AnalysisException {
         if(args_s.length() == 0)
           throw new AnalysisException("the function " + toString()
@@ -163,7 +201,7 @@ public class VirtualColumn extends Column {
       }
     };
 
-    FUNCTION() {
+    private Function() {
       setFunctionName();
     }
 
@@ -171,6 +209,7 @@ public class VirtualColumn extends Column {
     protected String function_name;
 
     abstract void setFunctionName();
+    abstract boolean isMonotonic();
 
     public FunctionCallExpr get(Expr binding) {
       List<Expr> params = new LinkedList<Expr>();
@@ -184,7 +223,10 @@ public class VirtualColumn extends Column {
         throw new AnalysisException("the funcion " + toString()
             + " can not received arguments (" + args_s + ")");
     }
+
   }
+
+  final Function function;
 
   public static final String SUBSTRING = "_part_";
 
@@ -217,7 +259,7 @@ public class VirtualColumn extends Column {
     String function_name = name.substring(index_start, index_end);
 
     try {
-      function = FUNCTION.valueOf(function_name.toUpperCase());
+      function = Function.valueOf(function_name.toUpperCase());
     } catch (IllegalArgumentException e) {
       throw new AnalysisException("the function (" + function_name
           + ") is not compatible with virtual columns");

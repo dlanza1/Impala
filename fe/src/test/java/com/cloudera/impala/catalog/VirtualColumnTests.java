@@ -44,7 +44,7 @@ public class VirtualColumnTests {
     try {
       VirtualColumn vc = new VirtualColumn("name_part_day", Type.NULL, 0);
 
-      assertEquals(vc.function, VirtualColumn.FUNCTION.DAY);
+      assertEquals(vc.function, VirtualColumn.Function.DAY);
     } catch (AnalysisException e) {
       e.printStackTrace();
       fail();
@@ -53,7 +53,7 @@ public class VirtualColumnTests {
     try {
       VirtualColumn vc = new VirtualColumn("name_part_nummonths", Type.NULL, 0);
 
-      assertEquals(vc.function, VirtualColumn.FUNCTION.NUMMONTHS);
+      assertEquals(vc.function, VirtualColumn.Function.NUMMONTHS);
 
       NumericLiteral tmp = new NumericLiteral(new BigDecimal(3));
 
@@ -71,7 +71,7 @@ public class VirtualColumnTests {
     try {
       VirtualColumn vc = new VirtualColumn("name_part_numdays", Type.NULL, 0);
 
-      assertEquals(vc.function, VirtualColumn.FUNCTION.NUMDAYS);
+      assertEquals(vc.function, VirtualColumn.Function.NUMDAYS);
 
       NumericLiteral tmp = new NumericLiteral(new BigDecimal(3));
 
