@@ -472,7 +472,7 @@ public class HdfsScanNode extends ScanNode {
       }else if (slotDesc.getColumn().canBeAppliedAutomaticPartitionPrunning()) {
         partitionSlots.add(slotDesc.getId());
         LOG.debug(slotDesc.getColumn().getName() + " column can be applied automatic "
-            + "partition pruning by " + slotDesc.getColumn().getAplicableColumns());
+            + "partition pruning by " + slotDesc.getColumn().getApplicableColumns());
       }
     }
 

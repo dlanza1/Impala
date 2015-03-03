@@ -22,6 +22,7 @@ import com.cloudera.impala.catalog.Function.CompareMode;
 import com.cloudera.impala.catalog.ScalarFunction;
 import com.cloudera.impala.catalog.Type;
 import com.cloudera.impala.catalog.VirtualColumn;
+import com.cloudera.impala.catalog.VirtualColumn.Function;
 import com.cloudera.impala.common.AnalysisException;
 import com.cloudera.impala.common.Pair;
 import com.cloudera.impala.common.Reference;
@@ -333,7 +334,7 @@ public class BinaryPredicate extends Predicate {
     for (VirtualColumn virtualColumn : virtual_columns) {
       FunctionCallExpr func = virtualColumn.getFunction(
           getSlotBinding(getBoundSlot().getSlotId()));
-      Operator op = getOperatorForAutoPartitionPruning(func.getFnName(), getOp());
+      Operator op = getOperatorForAutoPartitionPruning(virtualColumn.getFunction().getDeclaringClass(), getOp());
       Expr pred = new BinaryPredicate(op, virtualColumn.newSlotRef(analyzer), func);
 
       //Concatenate predicates
@@ -344,28 +345,21 @@ public class BinaryPredicate extends Predicate {
     return out_pred;
   }
 
-  private Operator getOperatorForAutoPartitionPruning(FunctionName fnName, Operator op) {
+  private Operator getOperatorForAutoPartitionPruning(Class<Function> function, Operator op) throws AnalysisException {
 
-    if (fnName.getFunction().equals("pmod")) {
+    if (function == Function.MOD.getClass()) {
       if (op != Operator.EQ)
-        throw new IllegalStateException("can not be applied with "
+        throw new AnalysisException("can not be applied with "
             + "partitioning by module and operators different than EQ.");
     }
 
-    if (fnName.getFunction().equals("year")
-        || fnName.getFunction().equals("month")
-        || fnName.getFunction().equals("day")
-        || fnName.getFunction().equals("hour")
-        || fnName.getFunction().equals("floor")) {
-      if (op == Operator.LT)
-        return Operator.LE;
-      if (op == Operator.GT)
-        return Operator.GE;
-      if (op == Operator.NE)
-        throw new IllegalStateException(
-            "Autmatic partitioning can not be applied with "
-                + "partitioning by " + fnName + " and NE operator.");
-    }
+    if (op == Operator.LT)
+      return Operator.LE;
+    if (op == Operator.GT)
+      return Operator.GE;
+    if (op == Operator.NE)
+      throw new AnalysisException(
+          "Autmatic partitioning can not be applied with " + "partitioning by " + function + " and NE operator.");
 
     return op;
   }

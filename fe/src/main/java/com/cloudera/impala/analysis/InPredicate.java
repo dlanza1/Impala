@@ -208,13 +208,13 @@ public class InPredicate extends Predicate {
       ArrayList<Expr> inList = new ArrayList<Expr>();
       ArrayList<Expr> actualInList = (ArrayList<Expr>) getChildren().clone();
       actualInList.remove(0);
-      for (Expr expr : actualInList) inList.add(virtualColumn.getFunction(expr));
+      for (Expr expr : actualInList)
+        inList.add(virtualColumn.getFunction(expr));
 
       Expr pred = new InPredicate(virtual_slotRef, inList, false);
 
       //Concatenate predicates
-      out_pred = (out_pred == null) ? pred :
-        new CompoundPredicate(CompoundPredicate.Operator.AND, pred, out_pred);
+      out_pred = (out_pred == null) ? pred : new CompoundPredicate(CompoundPredicate.Operator.AND, pred, out_pred);
     }
 
     return out_pred;

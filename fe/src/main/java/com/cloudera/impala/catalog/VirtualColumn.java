@@ -16,12 +16,11 @@ import com.cloudera.impala.common.AnalysisException;
 import com.cloudera.impala.common.Pair;
 
 /**
- * Represents columns that can be used to prune partitions but
- * it is not a partitioning (clustering) column.
+ * Partitioning (clustering) columns that can be used to prune partitions automatically
  */
 public class VirtualColumn extends Column {
 
-  enum Function {
+  public enum Function {
     YEAR {
       @Override
       void setFunctionName() {
@@ -30,7 +29,7 @@ public class VirtualColumn extends Column {
 
       @Override
       boolean isMonotonic() {
-        return false;
+        return true;
       }
     },
     MONTH {
@@ -99,7 +98,7 @@ public class VirtualColumn extends Column {
 
       @Override
       boolean isMonotonic() {
-        return false;
+        return true;
       }
 
       @Override
@@ -161,7 +160,7 @@ public class VirtualColumn extends Column {
     DIV {
       @Override
       void setFunctionName() {
-        function_name = "div";
+        function_name = "floor";
       }
 
       @Override
@@ -205,12 +204,25 @@ public class VirtualColumn extends Column {
       setFunctionName();
     }
 
+    /**
+     * Arguments
+     */
     protected Expr[] args;
+
+    /**
+     * Impala function name
+     */
     protected String function_name;
 
     abstract void setFunctionName();
     abstract boolean isMonotonic();
 
+    /**
+     * Get funding function
+     *
+     * @param binding
+     * @return
+     */
     public FunctionCallExpr get(Expr binding) {
       List<Expr> params = new LinkedList<Expr>();
       params.add(binding);
@@ -218,12 +230,62 @@ public class VirtualColumn extends Column {
       return new FunctionCallExpr(function_name, params);
     }
 
+    /**
+     * Compute the arguments of the function (get the values)
+     *
+     * @param args_s Arguments extracted from the column name
+     * @throws AnalysisException
+     */
     void computeArguments(String args_s) throws AnalysisException {
       if (args_s.length() > 0)
         throw new AnalysisException("the funcion " + toString()
             + " can not received arguments (" + args_s + ")");
     }
 
+    /**
+     * Get the function from the column name
+     *
+     * @param column_name
+     * @return
+     * @throws AnalysisException
+     */
+    static Function fromString(String column_name) throws AnalysisException {
+      int index_substring = column_name.indexOf(SUBSTRING);
+      if (index_substring == -1)
+        throw new AnalysisException("the name of the virtual column (" +
+            column_name + ") should contain " + SUBSTRING);
+
+      int index_start = index_substring + SUBSTRING.length();
+      int index_end = column_name.indexOf("_", index_start);
+      if (index_end == -1)
+        index_end = column_name.length();
+
+      if (index_start == index_end)
+        throw new AnalysisException("the name of the virtual column (" +
+            column_name + ") should contain the name of the function after " + SUBSTRING);
+
+      String function_name = column_name.substring(index_start, index_end);
+
+      try {
+        return Function.valueOf(function_name.toUpperCase());
+      } catch (IllegalArgumentException e) {
+        throw new AnalysisException("the function (" + function_name
+            + ") is not compatible with virtual columns");
+      }
+    }
+
+    /**
+     * Extracts the arguments from the column name
+     *
+     * @param column_name
+     * @return Arguments
+     */
+    static String extractArguments(String column_name){
+      int end_substring = column_name.indexOf(SUBSTRING) + SUBSTRING.length();
+      int start_arg = column_name.indexOf("_", end_substring);
+
+      return start_arg == -1 ? "" : column_name.substring(start_arg);
+    }
   }
 
   final Function function;
@@ -242,30 +304,8 @@ public class VirtualColumn extends Column {
   public VirtualColumn(String name, Type type, String comment, int pos) throws AnalysisException {
     super(name, type, comment, pos);
 
-    int index_substring = name.indexOf(SUBSTRING);
-    if (index_substring == -1)
-      throw new AnalysisException("the name of the virtual column (" +
-          name + ") should contain " + SUBSTRING);
-
-    int index_start = index_substring + SUBSTRING.length();
-    int index_end = name.indexOf("_", index_start);
-    if (index_end == -1)
-      index_end = name.length();
-
-    if (index_start == index_end)
-      throw new AnalysisException("the name of the virtual column (" +
-                        name + ") should contain the name of the function after " + SUBSTRING);
-
-    String function_name = name.substring(index_start, index_end);
-
-    try {
-      function = Function.valueOf(function_name.toUpperCase());
-    } catch (IllegalArgumentException e) {
-      throw new AnalysisException("the function (" + function_name
-          + ") is not compatible with virtual columns");
-    }
-
-    function.computeArguments(name.substring(index_end, name.length()));
+    function = Function.fromString(name);
+    function.computeArguments(Function.extractArguments(name));
   }
 
   public String getColumnNameInWhichApplies() {
@@ -313,6 +353,10 @@ public class VirtualColumn extends Column {
   public LinkedList<VirtualColumn> getAplicableColumns(Pair<Expr, Expr> between_bounds)
       throws AnalysisException {
     throw new AnalysisException("over virtual columns can not apply other columns");
+  }
+
+  public Function getFunction() {
+    return function;
   }
 
 }

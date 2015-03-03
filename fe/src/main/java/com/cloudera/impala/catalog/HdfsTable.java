@@ -550,6 +550,8 @@ public class HdfsTable extends Table {
       loadColumnStats(col, client);
     }
 
+    LOG.debug("Loaded from loadColumns");
+
     computeVirtualColumns();
   }
 

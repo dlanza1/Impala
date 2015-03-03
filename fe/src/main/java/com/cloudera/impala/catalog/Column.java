@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import com.cloudera.impala.analysis.CastExpr;
 import com.cloudera.impala.analysis.Expr;
+import com.cloudera.impala.catalog.VirtualColumn.Function;
 import com.cloudera.impala.common.AnalysisException;
 import com.cloudera.impala.common.Pair;
 import com.cloudera.impala.thrift.TColumn;
@@ -49,7 +50,7 @@ public class Column {
    * pruning as a column that can prune partitions,
    * these ones are the virtual columns that can be applied.
    */
-  protected LinkedList<VirtualColumn> aplicable_columns;
+  protected LinkedList<VirtualColumn> applicable_columns;
 
   public Column(String name, Type type, int position) {
     this(name, type, null, position);
@@ -62,7 +63,7 @@ public class Column {
     position_ = position;
     stats_ = new ColumnStats(type);
 
-    aplicable_columns = null;
+    applicable_columns = null;
   }
 
   public static Column create(String name, Type type, String comment, int pos) {
@@ -147,57 +148,70 @@ public class Column {
    * @return True if can be used for this purpose, otherwise false
    */
   public boolean canBeAppliedAutomaticPartitionPrunning() {
-    return aplicable_columns != null && aplicable_columns.size() > 0;
+    return applicable_columns != null && applicable_columns.size() > 0;
   }
 
   protected void addApplicableColumn(VirtualColumn virtual_col) throws TableLoadingException {
-    if(aplicable_columns == null)
-      aplicable_columns = new LinkedList<VirtualColumn>();
+    if(applicable_columns == null)
+      applicable_columns = new LinkedList<VirtualColumn>();
 
-    aplicable_columns.add(virtual_col);
+    applicable_columns.add(virtual_col);
   }
 
   public LinkedList<VirtualColumn> getAplicableColumns(Pair<Expr, Expr> between_bounds) throws AnalysisException{
 
-    if(aplicable_columns == null)
+    if(applicable_columns == null || applicable_columns.size() == 0)
       throw new AnalysisException("there is no aplicable columns for " + name_);
 
-    if(aplicable_columns.size() == 1 || useMonotonicFunctions())
-      return aplicable_columns;
+    if(useMonotonicFunctions())
+      return applicable_columns;
 
+    HashMap<Class<Function>, VirtualColumn> part_columns_map = getPartitionColumnsMap(applicable_columns);
     LinkedList<VirtualColumn> valid_part_columns = new LinkedList<VirtualColumn>();
-    HashMap<String, VirtualColumn> part_columns_map = getPartitionColumnsMap(aplicable_columns);
+
+    if(part_columns_map.containsKey(Function.MOD.getClass())){
+      if(between_bounds != null)
+        throw new AnalysisException("the mod function can not be used with between predicates: "
+            + between_bounds.first.toSql() + ", " + between_bounds.second.toSql());
+
+      valid_part_columns.add(part_columns_map.get(Function.MOD.getClass()));
+      return valid_part_columns;
+    }
+
+    if(between_bounds == null)
+      throw new AnalysisException("time functions are applied "
+          + "and there is no between predicate for " + name_);
 
     try{
       Calendar lower_cal = ((CastExpr) between_bounds.first).toCalendar();
       Calendar upper_cal = ((CastExpr) between_bounds.second).toCalendar();
 
-      if(part_columns_map.containsKey("year")){
-        valid_part_columns.add(part_columns_map.get("year"));
+      if(part_columns_map.containsKey(Function.YEAR.getClass())){
+        valid_part_columns.add(part_columns_map.get(Function.YEAR.getClass()));
 
         if(upper_cal.get(Calendar.YEAR) != lower_cal.get(Calendar.YEAR))
           return valid_part_columns;
       }else
         throw new IllegalStateException("could not be found a column for partitioning by year.");
 
-      if(part_columns_map.containsKey("month")){
-        valid_part_columns.add(part_columns_map.get("month"));
+      if(part_columns_map.containsKey(Function.MONTH.getClass())){
+        valid_part_columns.add(part_columns_map.get(Function.MONTH.getClass()));
 
         if(upper_cal.get(Calendar.MONTH) != lower_cal.get(Calendar.MONTH))
           return valid_part_columns;
       }else
         return valid_part_columns;
 
-      if(part_columns_map.containsKey("day")){
-        valid_part_columns.add(part_columns_map.get("day"));
+      if(part_columns_map.containsKey(Function.DAY.getClass())){
+        valid_part_columns.add(part_columns_map.get(Function.DAY.getClass()));
 
         if(upper_cal.get(Calendar.DAY_OF_MONTH) != lower_cal.get(Calendar.DAY_OF_MONTH))
           return valid_part_columns;
       }else
         return valid_part_columns;
 
-      if(part_columns_map.containsKey("hour")){
-        valid_part_columns.add(part_columns_map.get("hour"));
+      if(part_columns_map.containsKey(Function.HOUR.getClass())){
+        valid_part_columns.add(part_columns_map.get(Function.HOUR.getClass()));
 
         if(upper_cal.get(Calendar.HOUR) != lower_cal.get(Calendar.HOUR))
           return valid_part_columns;
@@ -205,22 +219,17 @@ public class Column {
         return valid_part_columns;
 
     }catch(IllegalStateException e){
-      LOG.debug("There was an error (" + e.getMessage() + ") when trying "
-          + "to obtain partition columns for between clause,"
-          + " the existing most coarse function will be used (amoung year, month, day or hour).");
+      LOG.debug("there was an error (" + e.getMessage() + ") when trying "
+          + "to obtain partition columns for between clause.");
       e.printStackTrace();
     }catch(Exception e){
-      LOG.debug("There was an error (" + e.getMessage() + ") when trying "
-          + "to obtain partition columns for between clause,"
-          + " the existing most coarse function will be used (amoung year, month, day or hour).");
+      LOG.debug("there was an error (" + e.getMessage() + ") when trying "
+          + "to obtain partition columns for between clause.");
       e.printStackTrace();
     }
 
-    if(valid_part_columns.size() < 1 && part_columns_map.containsKey("year"))
-      valid_part_columns.add(part_columns_map.get("year"));
-
     if(valid_part_columns.size() < 1)
-      throw new IllegalStateException("could not be found any column for partitioning by time.");
+      throw new AnalysisException("could not be found any valid virtual column for " + toString());
 
     return valid_part_columns;
   }
@@ -232,38 +241,32 @@ public class Column {
    * @param part_columns List of partitioning columns to convert
    * @return HashMap where the key is the correspond partition
    * function and the value is the partitioning column
-   * @throws AnalysisException
    */
-  private static HashMap<String, VirtualColumn> getPartitionColumnsMap(LinkedList<VirtualColumn> virtual_columns)
-      throws AnalysisException {
-    HashMap<String, VirtualColumn> virtual_columns_map = new HashMap<String, VirtualColumn>();
+  @SuppressWarnings("unchecked")
+  private HashMap<Class<Function>, VirtualColumn> getPartitionColumnsMap(LinkedList<VirtualColumn> virtual_columns){
+    HashMap<Class<Function>, VirtualColumn> virtual_columns_map = new HashMap<Class<Function>, VirtualColumn>();
 
-    for (VirtualColumn virtualColumn : virtual_columns){
-      virtual_columns_map.put(
-          virtualColumn.getFunction(null).getFnName().getFunction(),
-          virtualColumn);
-    }
+    for (VirtualColumn virtualColumn : virtual_columns)
+      virtual_columns_map.put((Class<Function>) virtualColumn.getFunction().getClass(), virtualColumn);
 
     return virtual_columns_map;
   }
 
+  /**
+   * Return true if all applicable columns use monotonic functions, otherwise return false
+   *
+   * @return
+   */
   private boolean useMonotonicFunctions(){
-    for (VirtualColumn virtual_column : aplicable_columns) {
-      String virtual_column_name = virtual_column.getName();
-
-      if(virtual_column_name.endsWith(VirtualColumn.SUBSTRING + "year")
-            || virtual_column_name.endsWith(VirtualColumn.SUBSTRING + "month")
-            || virtual_column_name.endsWith(VirtualColumn.SUBSTRING + "day")
-            || virtual_column_name.endsWith(VirtualColumn.SUBSTRING + "hour")){
+    for (VirtualColumn virtual_column : applicable_columns)
+      if(!virtual_column.function.isMonotonic())
         return false;
-      }
-    }
 
     return true;
   }
 
-  public LinkedList<VirtualColumn> getAplicableColumns() {
-    return aplicable_columns;
+  public LinkedList<VirtualColumn> getApplicableColumns() {
+    return applicable_columns;
   }
 
 }
